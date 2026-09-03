@@ -13,6 +13,7 @@ import {
   createClass as sbCreateClass,
   deleteClass as sbDeleteClass,
   fetchBookings,
+  fetchAllBookings,
   createBooking as sbCreateBooking,
   removeBooking as sbRemoveBooking,
   fetchWorkoutLogs,
@@ -22,7 +23,10 @@ import {
   setConsultationStatus as sbSetConsultationStatus,
   fetchNotifications,
   markAllNotificationsRead as sbMarkAllNotificationsRead,
-  sendNotification as sbSendNotification
+  sendNotification as sbSendNotification,
+  fetchTransactions,
+  recordTransaction,
+  fetchAllProfiles
 } from "../lib/supabase";
 
 const GymContext = createContext(null);
@@ -48,6 +52,9 @@ export function GymProvider({ children }) {
 
   // User's booked classes
   const [bookings, setBookings] = useState([]);
+
+  // Admin view of all member bookings across the facility
+  const [adminBookings, setAdminBookings] = useState([]);
 
   // Workout log items
   const [workoutLogs, setWorkoutLogs] = useState([]);
@@ -93,7 +100,7 @@ export function GymProvider({ children }) {
   // ==========================================================
   // SUPABASE DATA SYNC: Classes, Consultations, Bookings, Logs
   // ==========================================================
-  const loadRemoteData = useCallback(async (userId) => {
+  const loadRemoteData = useCallback(async (userId, role = null) => {
     if (!isSupabaseConfigured || !supabase) return;
 
     // Load classes
@@ -130,6 +137,59 @@ export function GymProvider({ children }) {
           createdAt: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recently"
         }))
       );
+    }
+
+    // If admin, load system-wide financial telemetry and all member bookings
+    if (role === "admin" || currentUser?.role === "admin") {
+      const [allTx, allBk, allProf] = await Promise.all([
+        fetchTransactions(),
+        fetchAllBookings(),
+        fetchAllProfiles()
+      ]);
+
+      if (allBk && allBk.length > 0) {
+        setAdminBookings(
+          allBk.map((b) => ({
+            id: b.id,
+            userId: b.user_id,
+            userName: b.user_name || "Athlete",
+            userEmail: b.user_email || "",
+            classTitle: b.class_title,
+            trainer: b.trainer,
+            date: b.date,
+            room: b.room,
+            status: b.status,
+            createdAt: b.created_at ? new Date(b.created_at).toLocaleDateString() : "Today"
+          }))
+        );
+      }
+
+      if (allTx) {
+        const totalRevenue = allTx.reduce((sum, tx) => {
+          const num = parseFloat(String(tx.amount).replace(/[^0-9.-]+/g, "")) || 0;
+          return sum + num;
+        }, 0);
+
+        const activeCount = allProf?.length || 0;
+        const totalSpots = (remoteClasses || []).reduce((sum, c) => sum + (c.total || 0), 0);
+        const bookedSpots = (remoteClasses || []).reduce((sum, c) => sum + ((c.total || 0) - (c.spots_left || 0)), 0);
+        const occupancy = totalSpots > 0 ? Math.round((bookedSpots / totalSpots) * 100) : 0;
+
+        setAdminStats({
+          monthlyRevenue: totalRevenue,
+          activeMembers: activeCount,
+          todayOccupancy: occupancy,
+          newSignupsThisWeek: Math.min(activeCount, 8),
+          recentTransactions: allTx.map((tx) => ({
+            id: tx.id,
+            member: tx.member,
+            plan: tx.plan,
+            amount: tx.amount,
+            status: tx.status,
+            date: tx.date || (tx.created_at ? new Date(tx.created_at).toLocaleDateString() : "Today")
+          }))
+        });
+      }
     }
 
     // If logged in, fetch user-specific data
@@ -178,7 +238,7 @@ export function GymProvider({ children }) {
         );
       }
     }
-  }, []);
+  }, [currentUser?.role]);
 
   // Listen to Supabase Auth state changes
   useEffect(() => {
@@ -408,18 +468,90 @@ export function GymProvider({ children }) {
       trainer: scheduleItem.trainer,
       date: `${scheduleItem.day}, ${scheduleItem.time}`,
       status: "Confirmed",
-      room: "Main Athletic Floor"
+      room: "Main Athletic Floor",
+      userName: currentUser?.name || "Athlete",
+      userEmail: currentUser?.email || ""
     };
     setBookings((prev) => [newBooking, ...prev]);
+    setAdminBookings((prev) => [newBooking, ...prev]);
 
     setSchedule((prev) =>
       prev.map((sc) => (sc.id === scheduleItem.id ? { ...sc, spotsLeft: Math.max(0, sc.spotsLeft - 1) } : sc))
     );
 
     if (isSupabaseConfigured && currentUser?.id) {
-      sbCreateBooking(currentUser.id, newBooking);
+      sbCreateBooking(currentUser.id, newBooking, {
+        name: currentUser.name,
+        email: currentUser.email
+      });
     }
     return newBooking;
+  };
+
+  const purchasePlan = async (plan) => {
+    // 1. Update current user state
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        membership: plan.name,
+        status: "Active"
+      };
+      localStorage.setItem("brave_user", JSON.stringify(updated));
+      return updated;
+    });
+
+    // 2. Persist membership update to Supabase profiles
+    if (isSupabaseConfigured && currentUser?.id) {
+      updateProfileData(currentUser.id, {
+        membership: plan.name,
+        status: "Active"
+      });
+
+      // 3. Record genuine financial transaction
+      const newTx = await recordTransaction({
+        userId: currentUser.id,
+        member: currentUser.name || "Athlete",
+        plan: plan.name,
+        amount: `$${plan.price}`,
+        date: "Today"
+      });
+
+      if (newTx) {
+        setAdminStats((prev) => ({
+          ...prev,
+          monthlyRevenue: prev.monthlyRevenue + Number(plan.price || 0),
+          recentTransactions: [
+            {
+              id: newTx.id,
+              member: newTx.member,
+              plan: newTx.plan,
+              amount: newTx.amount,
+              status: newTx.status,
+              date: "Today"
+            },
+            ...prev.recentTransactions
+          ]
+        }));
+      }
+    } else {
+      // Local fallback
+      setAdminStats((prev) => ({
+        ...prev,
+        monthlyRevenue: prev.monthlyRevenue + Number(plan.price || 0),
+        recentTransactions: [
+          {
+            id: `tx-${Date.now().toString().slice(-4)}`,
+            member: currentUser?.name || "Athlete",
+            plan: plan.name,
+            amount: `$${plan.price}`,
+            status: "Paid",
+            date: "Today"
+          },
+          ...prev.recentTransactions
+        ]
+      }));
+    }
   };
 
   const cancelBooking = async (bookingId) => {
@@ -583,8 +715,10 @@ export function GymProvider({ children }) {
         addScheduleClass,
         removeScheduleClass,
         bookings,
+        adminBookings,
         bookClass,
         cancelBooking,
+        purchasePlan,
         workoutLogs,
         addWorkoutLog,
         consultationRequests,

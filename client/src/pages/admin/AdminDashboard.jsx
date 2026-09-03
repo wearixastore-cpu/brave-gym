@@ -47,6 +47,7 @@ export default function AdminDashboard() {
     uploadUserAvatar,
     addScheduleClass,
     removeScheduleClass,
+    adminBookings,
     isSupabaseConfigured
   } = useGym();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -213,6 +214,7 @@ export default function AdminDashboard() {
 
   const sidebarNavItems = [
     { id: "overview", label: "Dashboard Overview", icon: LayoutDashboard, desc: "Live KPI Telemetry" },
+    { id: "bookings", label: "Athlete Bookings", icon: Users, badge: adminBookings?.length, desc: "Reserved Spots Roster" },
     { id: "requests", label: "Consultation Orders", icon: MessageSquare, badge: consultationRequests?.length, desc: "Athlete Intake Leads" },
     { id: "schedule", label: "Timetable & Classes", icon: Calendar, desc: "Arena Scheduling" },
     { id: "finances", label: "Finances & Spatial", icon: DollarSign, desc: "Revenue & Zone Share" },
@@ -480,12 +482,14 @@ export default function AdminDashboard() {
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-[11px] text-[#8C8C8C] uppercase font-mono tracking-wider whitespace-nowrap">
                 <Target className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Revenue Target</span>
+                <span>Monthly Revenue</span>
               </div>
               <div className="font-display text-2xl xl:text-3xl font-extrabold text-white whitespace-nowrap">
                 ${adminStats.monthlyRevenue.toLocaleString()}
               </div>
-              <p className="text-[10px] text-emerald-400 font-mono whitespace-nowrap">+14.8% vs goal</p>
+              <p className="text-[10px] text-emerald-400 font-mono whitespace-nowrap">
+                {adminStats.recentTransactions.length} Verified {adminStats.recentTransactions.length === 1 ? "Order" : "Orders"}
+              </p>
             </div>
 
             {/* Circular Gauge */}
@@ -506,7 +510,7 @@ export default function AdminDashboard() {
                   r="38"
                   className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.7)] transition-all duration-1000 ease-out"
                   strokeDasharray={2 * Math.PI * 38}
-                  strokeDashoffset={2 * Math.PI * 38 * (1 - 0.92)}
+                  strokeDashoffset={2 * Math.PI * 38 * (1 - Math.min(1, Math.max(0.1, adminStats.monthlyRevenue / 5000)))}
                   strokeWidth="8"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -514,7 +518,7 @@ export default function AdminDashboard() {
                 />
               </svg>
               <span className="absolute font-mono text-[10px] font-bold text-emerald-400">
-                92%
+                {Math.min(100, Math.round((adminStats.monthlyRevenue / 5000) * 100))}%
               </span>
             </div>
           </div>
@@ -524,12 +528,14 @@ export default function AdminDashboard() {
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-[11px] text-[#8C8C8C] uppercase font-mono tracking-wider whitespace-nowrap">
                 <Users className="w-3.5 h-3.5 text-white shrink-0" />
-                <span>Roster Retention</span>
+                <span>Active Athletes</span>
               </div>
               <div className="font-display text-2xl xl:text-3xl font-extrabold text-white">
                 {adminStats.activeMembers}
               </div>
-              <p className="text-[10px] text-white/60 whitespace-nowrap">+{adminStats.newSignupsThisWeek} signups/wk</p>
+              <p className="text-[10px] text-white/60 whitespace-nowrap">
+                Registered profiles
+              </p>
             </div>
 
             {/* Circular Gauge */}
@@ -550,7 +556,7 @@ export default function AdminDashboard() {
                   r="38"
                   className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)] transition-all duration-1000 ease-out"
                   strokeDasharray={2 * Math.PI * 38}
-                  strokeDashoffset={2 * Math.PI * 38 * (1 - 0.96)}
+                  strokeDashoffset={2 * Math.PI * 38 * (1 - Math.min(1, Math.max(0.1, adminStats.activeMembers / 20)))}
                   strokeWidth="8"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -558,7 +564,7 @@ export default function AdminDashboard() {
                 />
               </svg>
               <span className="absolute font-mono text-[10px] font-bold text-amber-400">
-                96%
+                {adminStats.activeMembers}
               </span>
             </div>
           </div>
@@ -568,12 +574,12 @@ export default function AdminDashboard() {
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-[11px] text-[#8C8C8C] uppercase font-mono tracking-wider whitespace-nowrap">
                 <Zap className="w-3.5 h-3.5 text-white shrink-0" />
-                <span>Class Utilization</span>
+                <span>Total Bookings</span>
               </div>
               <div className="font-display text-2xl xl:text-3xl font-extrabold text-white">
-                78%
+                {adminBookings?.length || 0}
               </div>
-              <p className="text-[10px] text-[#8C8C8C] whitespace-nowrap">Optimal roster pace</p>
+              <p className="text-[10px] text-[#8C8C8C] whitespace-nowrap">Live athlete reservations</p>
             </div>
 
             {/* Circular Gauge */}
@@ -594,7 +600,7 @@ export default function AdminDashboard() {
                   r="38"
                   className="text-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.7)] transition-all duration-1000 ease-out"
                   strokeDasharray={2 * Math.PI * 38}
-                  strokeDashoffset={2 * Math.PI * 38 * (1 - 0.78)}
+                  strokeDashoffset={2 * Math.PI * 38 * (1 - Math.min(1, Math.max(0.1, (adminBookings?.length || 0) / 20)))}
                   strokeWidth="8"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -602,12 +608,78 @@ export default function AdminDashboard() {
                 />
               </svg>
               <span className="absolute font-mono text-[10px] font-bold text-blue-400">
-                78%
+                {adminBookings?.length || 0}
               </span>
             </div>
           </div>
 
         </div>
+
+        {/* Tab Content: Athlete Bookings (Real-Time Class Reservations) */}
+        {(activeTab === "overview" || activeTab === "bookings") && (
+          <div className="space-y-6 pt-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/10">
+              <div className="space-y-1">
+                <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C] block">
+                  Class Attendance & Reservations
+                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="font-display text-2xl font-bold text-white uppercase">
+                    Athlete Bookings Roster
+                  </h2>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white text-black shadow-sm">
+                    {adminBookings?.length || 0} Booked
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-[#8C8C8C] max-w-sm">
+                Real-time synchronized athlete bookings for scheduled arena combine sessions.
+              </p>
+            </div>
+
+            <div className="bg-[#141414] border border-white/10 rounded-sm divide-y divide-white/10">
+              {adminBookings && adminBookings.length > 0 ? (
+                adminBookings.map((bk) => (
+                  <div
+                    key={bk.id}
+                    className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <h4 className="font-display text-base sm:text-lg font-bold text-white uppercase">
+                          {bk.userName}
+                        </h4>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-white/15 bg-white/5 text-white/80">
+                          {bk.classTitle}
+                        </span>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {bk.status}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-[#8C8C8C]">
+                        {bk.userEmail && <span>✉️ {bk.userEmail}</span>}
+                        <span>🏋️ Coach: {bk.trainer}</span>
+                        <span>•</span>
+                        <span>🏟️ {bk.room}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 self-end md:self-auto">
+                      <span className="text-xs font-mono text-white bg-white/5 px-3 py-1.5 rounded border border-white/10">
+                        {bk.date}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-xs text-[#8C8C8C]">
+                  No athlete reservations logged yet. When athletes book classes in the curriculum schedule, they will appear here instantly.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tab Content: Consultation Requests & Orders */}
         {(activeTab === "overview" || activeTab === "requests") && (
@@ -772,28 +844,30 @@ export default function AdminDashboard() {
                   <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#262626" strokeWidth="4" />
-                      {/* Black Tier: 52% */}
+                      {/* Black Tier segment */}
                       <circle
                         cx="18" cy="18" r="15.9155" fill="none" stroke="#FFFFFF" strokeWidth="4"
-                        strokeDasharray="52 100" strokeDashoffset="0"
+                        strokeDasharray="50 100" strokeDashoffset="0"
                         className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
                       />
-                      {/* Obsidian Private: 33% */}
+                      {/* Obsidian Private segment */}
                       <circle
                         cx="18" cy="18" r="15.9155" fill="none" stroke="#FBBF24" strokeWidth="4"
-                        strokeDasharray="33 100" strokeDashoffset="-52"
+                        strokeDasharray="30 100" strokeDashoffset="-50"
                         className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]"
                       />
-                      {/* Brave Trial: 15% */}
+                      {/* Brave Trial segment */}
                       <circle
                         cx="18" cy="18" r="15.9155" fill="none" stroke="#60A5FA" strokeWidth="4"
-                        strokeDasharray="15 100" strokeDashoffset="-85"
+                        strokeDasharray="20 100" strokeDashoffset="-80"
                         className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]"
                       />
                     </svg>
                     <div className="absolute text-center">
-                      <span className="font-display text-lg font-bold text-white block leading-none">$48.9k</span>
-                      <span className="text-[9px] font-mono text-[#8C8C8C] uppercase">MTD Gross</span>
+                      <span className="font-display text-lg font-bold text-white block leading-none">
+                        ${adminStats.monthlyRevenue.toLocaleString()}
+                      </span>
+                      <span className="text-[9px] font-mono text-[#8C8C8C] uppercase">Live Gross</span>
                     </div>
                   </div>
 
@@ -804,21 +878,27 @@ export default function AdminDashboard() {
                         <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_6px_white]" />
                         Black Tier
                       </span>
-                      <strong className="text-white">52% ($25.4k)</strong>
+                      <strong className="text-white">
+                        {adminStats.recentTransactions.filter(t => t.plan?.toLowerCase().includes("black")).length} Orders
+                      </strong>
                     </div>
                     <div className="flex items-center justify-between sm:justify-start gap-3">
                       <span className="flex items-center gap-2 text-amber-300">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
                         Obsidian Private
                       </span>
-                      <strong className="text-white">33% ($16.1k)</strong>
+                      <strong className="text-white">
+                        {adminStats.recentTransactions.filter(t => t.plan?.toLowerCase().includes("obsidian")).length} Orders
+                      </strong>
                     </div>
                     <div className="flex items-center justify-between sm:justify-start gap-3">
                       <span className="flex items-center gap-2 text-blue-300">
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
                         Brave Trial Passes
                       </span>
-                      <strong className="text-white">15% ($7.4k)</strong>
+                      <strong className="text-white">
+                        {adminStats.recentTransactions.filter(t => t.plan?.toLowerCase().includes("trial")).length} Orders
+                      </strong>
                     </div>
                   </div>
                 </div>

@@ -200,7 +200,21 @@ export async function fetchBookings(userId) {
   return data;
 }
 
-export async function createBooking(userId, bookingItem) {
+export async function fetchAllBookings() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Error loading all bookings from Supabase:", error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function createBooking(userId, bookingItem, userMeta = {}) {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("bookings")
@@ -212,7 +226,9 @@ export async function createBooking(userId, bookingItem) {
         trainer: bookingItem.trainer,
         date: bookingItem.date,
         room: bookingItem.room || "Main Athletic Floor",
-        status: "Confirmed"
+        status: "Confirmed",
+        user_name: userMeta.name || "Brave Member",
+        user_email: userMeta.email || ""
       }
     ])
     .select()
@@ -380,3 +396,65 @@ export async function sendNotification(userId, title, message, type = "admin_res
   if (error) console.error("Error creating notification in Supabase:", error.message);
   return data;
 }
+
+// ==========================================
+// TRANSACTIONS & FINANCIAL AUDIT HELPERS
+// ==========================================
+
+export async function fetchTransactions() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Error fetching transactions from Supabase:", error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function recordTransaction({ userId, member, plan, amount, date = "Today" }) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("transactions")
+    .insert([
+      {
+        id: `tx-${Date.now().toString().slice(-6)}`,
+        user_id: userId || null,
+        member: member || "Athlete",
+        plan: plan || "Membership Tier",
+        amount: String(amount).startsWith("$") ? amount : `$${amount}`,
+        status: "Paid",
+        date: date || "Today"
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating transaction in Supabase:", error.message);
+    return null;
+  }
+  return data;
+}
+
+// ==========================================
+// PROFILES ROSTER HELPERS (FOR ADMIN KPI)
+// ==========================================
+
+export async function fetchAllProfiles() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Error fetching all profiles from Supabase:", error.message);
+    return null;
+  }
+  return data;
+}
+

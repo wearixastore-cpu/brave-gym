@@ -4,18 +4,14 @@ import { useGym } from "../../context/GymContext";
 import confetti from "canvas-confetti";
 
 export default function Pricing() {
-  const { memberships, setCurrentUser } = useGym();
+  const { memberships, purchasePlan } = useGym();
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [purchased, setPurchased] = useState(false);
 
-  const handleCheckout = (plan) => {
+  const handleCheckout = async (plan) => {
     setSelectedPlan(plan);
     setPurchased(true);
-    setCurrentUser((prev) => ({
-      ...prev,
-      membership: plan.name,
-      status: "Active"
-    }));
+    await purchasePlan(plan);
     confetti({
       particleCount: 120,
       spread: 70,
