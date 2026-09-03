@@ -291,10 +291,11 @@ export function GymProvider({ children }) {
   // ==========================================
 
   const login = async (email, password, role = "user") => {
-    const isAdmin = email.toLowerCase().includes("admin") || role === "admin";
+    const cleanEmail = email.trim().toLowerCase();
+    const isAdmin = cleanEmail.includes("admin") || role === "admin";
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseSignIn(email, password);
+      const { data, error } = await supabaseSignIn(cleanEmail, password);
       if (error) {
         throw error;
       }
@@ -303,13 +304,13 @@ export function GymProvider({ children }) {
         const userObj = {
           id: data.user.id,
           email: data.user.email,
-          name: profile?.name || (isAdmin ? "Admin Director" : email.split("@")[0]),
+          name: profile?.name || (isAdmin ? "Admin Director" : cleanEmail.split("@")[0]),
           role: profile?.role || (isAdmin ? "admin" : "user"),
           membership: profile?.membership || (isAdmin ? "Staff Command" : "Black Tier"),
           status: profile?.status || "Active",
           renewalDate: profile?.renewal_date || "Dec 31, 2026",
-          streak: profile?.streak ?? (isAdmin ? 42 : 1),
-          sessionsThisMonth: profile?.sessions_this_month ?? (isAdmin ? 24 : 3),
+          streak: profile?.streak ?? (isAdmin ? 42 : 0),
+          sessionsThisMonth: profile?.sessions_this_month ?? (isAdmin ? 24 : 0),
           avatar: profile?.avatar_url || (isAdmin 
             ? "/media/edgar-chaparro-sHfo3WOgGTU-unsplash.jpg"
             : "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg")
@@ -322,14 +323,14 @@ export function GymProvider({ children }) {
     // Local / Offline fallback mode
     const userObj = {
       id: "usr-" + Date.now().toString().slice(-4),
-      name: isAdmin ? "Admin Director" : (email.split("@")[0].replace(".", " ") || "Brave Member"),
-      email: email,
+      name: isAdmin ? "Admin Director" : (cleanEmail.split("@")[0].replace(".", " ") || "Brave Member"),
+      email: cleanEmail,
       role: isAdmin ? "admin" : "user",
       membership: isAdmin ? "Staff Command" : "Black Tier",
       status: "Active",
       renewalDate: "Dec 31, 2026",
-      streak: isAdmin ? 42 : 1,
-      sessionsThisMonth: isAdmin ? 24 : 3,
+      streak: isAdmin ? 42 : 0,
+      sessionsThisMonth: isAdmin ? 24 : 0,
       avatar: isAdmin 
         ? "/media/edgar-chaparro-sHfo3WOgGTU-unsplash.jpg"
         : "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg"
@@ -339,10 +340,11 @@ export function GymProvider({ children }) {
   };
 
   const register = async (name, email, password, role = "user") => {
-    const isAdmin = email.toLowerCase().includes("admin") || role === "admin";
+    const cleanEmail = email.trim().toLowerCase();
+    const isAdmin = cleanEmail.includes("admin") || role === "admin";
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseSignUp(email, password, {
+      const { data, error } = await supabaseSignUp(cleanEmail, password, {
         name,
         role: isAdmin ? "admin" : role
       });
@@ -350,20 +352,24 @@ export function GymProvider({ children }) {
         throw error;
       }
       if (data?.user) {
+        // If Supabase has "Confirm email" enabled, session will be null until verified
+        const isEmailConfirmed = data.user.identities && data.user.identities.length > 0 && !data.session;
         const userObj = {
           id: data.user.id,
           name: name || "New Athlete",
-          email: email,
+          email: cleanEmail,
           role: isAdmin ? "admin" : role,
           membership: "Brave Trial",
           status: "Active",
           renewalDate: "30 Days Free",
-          streak: 1,
+          streak: 0,
           sessionsThisMonth: 0,
           avatar: "/media/david-guliciuc-o2zrjlM5s5o-unsplash.jpg"
         };
-        setCurrentUser(userObj);
-        return userObj;
+        if (data.session) {
+          setCurrentUser(userObj);
+        }
+        return { ...userObj, requiresEmailConfirmation: isEmailConfirmed };
       }
     }
 
@@ -371,12 +377,12 @@ export function GymProvider({ children }) {
     const userObj = {
       id: "usr-" + Date.now().toString().slice(-4),
       name: name || "New Athlete",
-      email: email,
+      email: cleanEmail,
       role: isAdmin ? "admin" : "user",
       membership: "Brave Trial",
       status: "Active",
       renewalDate: "30 Days Free",
-      streak: 1,
+      streak: 0,
       sessionsThisMonth: 0,
       avatar: "/media/david-guliciuc-o2zrjlM5s5o-unsplash.jpg"
     };
