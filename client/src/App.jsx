@@ -50,6 +50,10 @@ function MemberRouteGuard({ children }) {
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
+  // Admins only use the dedicated /admin panel
+  if (currentUser.role === "admin") {
+    return <Navigate to="/admin" replace />;
+  }
   return children;
 }
 
