@@ -43,6 +43,7 @@ export default function AdminDashboard() {
     memberships,
     consultationRequests,
     updateConsultationStatus,
+    removeConsultationRequest,
     updateProfile,
     uploadUserAvatar,
     addScheduleClass,
@@ -755,6 +756,14 @@ export default function AdminDashboard() {
                       >
                         Inspect Dossier
                       </button>
+
+                      <button
+                        onClick={() => removeConsultationRequest(req.id)}
+                        className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
+                        title="Delete consultation record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))
@@ -988,47 +997,53 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {tierList.map((tier) => (
-                <div key={tier.id} className="p-6 bg-[#141414] border border-white/10 rounded-sm space-y-4 shadow-lg hover:border-white/30 transition-all flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-mono tracking-widest text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 font-bold">
-                        Active Tier
-                      </span>
-                      <Flame className="w-4 h-4 text-amber-400" />
+              {tierList && tierList.length > 0 ? (
+                tierList.map((tier) => (
+                  <div key={tier.id} className="p-6 bg-[#141414] border border-white/10 rounded-sm space-y-4 shadow-lg hover:border-white/30 transition-all flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-mono tracking-widest text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 font-bold">
+                          Active Tier
+                        </span>
+                        <Flame className="w-4 h-4 text-amber-400" />
+                      </div>
+
+                      <h3 className="font-display text-xl font-bold text-white uppercase">{tier.name}</h3>
+                      
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-display text-3xl font-extrabold text-white">{tier.price}</span>
+                        <span className="text-xs text-[#8C8C8C]">/{tier.billing || "monthly"}</span>
+                      </div>
+
+                      <p className="text-xs text-[#8C8C8C] leading-relaxed">{tier.description}</p>
+
+                      <div className="pt-3 border-t border-white/10 space-y-1.5">
+                        <span className="text-[10px] uppercase font-mono text-[#8C8C8C] block">Included Features:</span>
+                        {tier.features?.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-white/80">
+                            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span>{f}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    <h3 className="font-display text-xl font-bold text-white uppercase">{tier.name}</h3>
-                    
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-display text-3xl font-extrabold text-white">{tier.price}</span>
-                      <span className="text-xs text-[#8C8C8C]">/{tier.billing || "monthly"}</span>
-                    </div>
-
-                    <p className="text-xs text-[#8C8C8C] leading-relaxed">{tier.description}</p>
-
-                    <div className="pt-3 border-t border-white/10 space-y-1.5">
-                      <span className="text-[10px] uppercase font-mono text-[#8C8C8C] block">Included Features:</span>
-                      {tier.features?.map((f, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-white/80">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          <span>{f}</span>
-                        </div>
-                      ))}
+                    <div className="pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-[#8C8C8C]">
+                      <span className="font-mono">Ref #{tier.id}</span>
+                      <button
+                        onClick={() => setTierList((prev) => prev.filter((t) => t.id !== tier.id))}
+                        className="text-rose-400 hover:text-rose-300 hover:underline text-xs"
+                      >
+                        Delete Tier
+                      </button>
                     </div>
                   </div>
-
-                  <div className="pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-[#8C8C8C]">
-                    <span className="font-mono">Ref #{tier.id}</span>
-                    <button
-                      onClick={() => setTierList((prev) => prev.filter((t) => t.id !== tier.id))}
-                      className="text-rose-400 hover:text-rose-300 hover:underline text-xs"
-                    >
-                      Delete Tier
-                    </button>
-                  </div>
+                ))
+              ) : (
+                <div className="col-span-full p-8 text-center text-xs text-[#8C8C8C] bg-[#141414] border border-white/10 rounded-sm">
+                  No membership tiers active. Click 'Create Membership Tier' to define access privileges.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}

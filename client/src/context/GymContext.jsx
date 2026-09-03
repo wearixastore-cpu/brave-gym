@@ -21,6 +21,7 @@ import {
   fetchConsultations,
   submitConsultation as sbSubmitConsultation,
   setConsultationStatus as sbSetConsultationStatus,
+  deleteConsultation as sbDeleteConsultation,
   fetchNotifications,
   markAllNotificationsRead as sbMarkAllNotificationsRead,
   sendNotification as sbSendNotification,
@@ -59,11 +60,8 @@ export function GymProvider({ children }) {
   // Workout log items
   const [workoutLogs, setWorkoutLogs] = useState([]);
 
-  // Consultation Requests sent to Admin
-  const [consultationRequests, setConsultationRequests] = useState(() => {
-    const saved = localStorage.getItem("brave_consultations");
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Consultation Requests sent to Admin (loaded directly from Supabase)
+  const [consultationRequests, setConsultationRequests] = useState([]);
 
   // Admin stats
   const [adminStats, setAdminStats] = useState({
@@ -121,9 +119,9 @@ export function GymProvider({ children }) {
       setSchedule([]);
     }
 
-    // Load consultations
+    // Load consultations directly from Supabase
     const remoteConsultations = await fetchConsultations();
-    if (remoteConsultations && remoteConsultations.length > 0) {
+    if (Array.isArray(remoteConsultations) && remoteConsultations.length > 0) {
       setConsultationRequests(
         remoteConsultations.map((r) => ({
           id: r.id,
@@ -139,6 +137,9 @@ export function GymProvider({ children }) {
           createdAt: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recently"
         }))
       );
+    } else {
+      setConsultationRequests([]);
+      localStorage.removeItem("brave_consultations");
     }
 
     // If admin, load system-wide financial telemetry and all member bookings
@@ -606,6 +607,13 @@ export function GymProvider({ children }) {
     }
   };
 
+  const removeConsultationRequest = async (id) => {
+    setConsultationRequests((prev) => prev.filter((r) => r.id !== id));
+    if (isSupabaseConfigured) {
+      sbDeleteConsultation(id);
+    }
+  };
+
   // ==========================================
   // NOTIFICATIONS
   // ==========================================
@@ -726,6 +734,7 @@ export function GymProvider({ children }) {
         consultationRequests,
         addConsultationRequest,
         updateConsultationStatus,
+        removeConsultationRequest,
         userNotifications,
         markNotificationsAsRead,
         createNotification,

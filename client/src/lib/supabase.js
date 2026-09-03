@@ -347,6 +347,16 @@ export async function setConsultationStatus(id, newStatus) {
   if (error) console.error("Error updating consultation status in Supabase:", error.message);
 }
 
+export async function deleteConsultation(id) {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from("consultations")
+    .delete()
+    .eq("id", id);
+
+  if (error) console.error("Error deleting consultation in Supabase:", error.message);
+}
+
 // ==========================================
 // NOTIFICATIONS HELPERS & REALTIME
 // ==========================================
