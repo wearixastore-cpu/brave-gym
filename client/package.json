@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@studio-freight/lenis": "^1.0.42",
     "@supabase/supabase-js": "^2.115.0",
     "@tailwindcss/vite": "^4.3.3",
     "canvas-confetti": "^1.9.4",
@@ -28,9 +27,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
-    "autoprefixer": "^10.5.4",
     "oxlint": "^1.79.0",
-    "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.2"
   }
