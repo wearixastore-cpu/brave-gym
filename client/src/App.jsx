@@ -32,14 +32,14 @@ function ScrollToTop() {
 
 // Protected Route Guard for Admin
 function AdminRouteGuard({ children }) {
-  const { currentUser, login } = useGym();
+  const { currentUser } = useGym();
   
-  // If no user or logged in as regular user, auto-promote to admin on /admin access in development/demo mode
-  useEffect(() => {
-    if (!currentUser || currentUser.role !== "admin") {
-      login("admin@bravegym.com", "braveAdmin2026");
-    }
-  }, [currentUser, login]);
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+  if (currentUser.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return children;
 }

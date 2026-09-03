@@ -28,7 +28,7 @@ import {
 const GymContext = createContext(null);
 
 export function GymProvider({ children }) {
-  // Current user state (can be null if logged out, or user object)
+  // Current user state (null when not logged in)
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem("brave_user");
     if (saved) {
@@ -38,19 +38,7 @@ export function GymProvider({ children }) {
         return null;
       }
     }
-    // Default demo user: Marcus Cole
-    return {
-      id: "usr-01",
-      name: "Marcus Cole",
-      email: "marcus.c@discipline.com",
-      role: "user", // "user" | "admin"
-      membership: "Black Tier",
-      status: "Active",
-      renewalDate: "Oct 15, 2026",
-      streak: 18,
-      sessionsThisMonth: 14,
-      avatar: "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg"
-    };
+    return null;
   });
 
   const [programs] = useState(INITIAL_PROGRAMS);

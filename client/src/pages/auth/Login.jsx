@@ -34,16 +34,6 @@ export default function Login() {
     }
   };
 
-  const fillQuickDemo = (roleType) => {
-    if (roleType === "admin") {
-      setEmail("admin@bravegym.com");
-      setPassword("braveAdmin2026");
-    } else {
-      setEmail("marcus.c@discipline.com");
-      setPassword("athletePass123");
-    }
-  };
-
   return (
     <div className="pt-28 pb-32 bg-[#0D0D0D] min-h-screen px-6 flex items-center justify-center">
       <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 rounded-sm border border-white/15 overflow-hidden bg-[#141414] shadow-2xl">
@@ -79,27 +69,9 @@ export default function Login() {
               </span>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">
-                Security Verification
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => fillQuickDemo("user")}
-                  className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/5 hover:bg-white/15 text-white/70 border border-white/10"
-                >
-                  Demo Member
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillQuickDemo("admin")}
-                  className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/20"
-                >
-                  Demo Admin
-                </button>
-              </div>
-            </div>
+            <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C] block">
+              Security Verification
+            </span>
 
             <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-white uppercase tracking-tight">
               Sign In To Arena
