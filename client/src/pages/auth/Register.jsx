@@ -9,6 +9,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("user");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { register } = useGym();
   const navigate = useNavigate();
