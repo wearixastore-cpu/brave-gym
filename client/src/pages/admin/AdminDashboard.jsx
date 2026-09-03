@@ -784,40 +784,47 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-[#141414] border border-white/10 rounded-sm divide-y divide-white/10">
-              {schedule.map((sc) => (
-                <div key={sc.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 hover:bg-white/[0.02]">
-                  <div className="flex items-start sm:items-center gap-4 sm:gap-6">
-                    <div className="w-24 sm:w-28 shrink-0">
-                      <span className="font-display font-bold text-white uppercase text-xs sm:text-sm block">{sc.day}</span>
-                      <span className="text-[11px] sm:text-xs font-mono text-[#8C8C8C]">{sc.time}</span>
+              {schedule && schedule.length > 0 ? (
+                schedule.map((sc) => (
+                  <div key={sc.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 hover:bg-white/[0.02]">
+                    <div className="flex items-start sm:items-center gap-4 sm:gap-6">
+                      <div className="w-24 sm:w-28 shrink-0">
+                        <span className="font-display font-bold text-white uppercase text-xs sm:text-sm block">{sc.day}</span>
+                        <span className="text-[11px] sm:text-xs font-mono text-[#8C8C8C]">{sc.time}</span>
+                      </div>
+
+                      <div>
+                        <h4 className="font-display text-sm sm:text-base font-bold text-white uppercase">{sc.classTitle}</h4>
+                        <span className="text-xs text-[#8C8C8C]">Instructor: {sc.trainer}</span>
+                      </div>
                     </div>
 
-                    <div>
-                      <h4 className="font-display text-sm sm:text-base font-bold text-white uppercase">{sc.classTitle}</h4>
-                      <span className="text-xs text-[#8C8C8C]">Instructor: {sc.trainer}</span>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-white/5">
+                      <div className="text-left sm:text-right">
+                        <span className="text-xs font-mono text-white block">
+                          {sc.spotsLeft} of {sc.total} spots left
+                        </span>
+                        <span className="text-[11px] text-[#8C8C8C]">
+                          {Math.round(((sc.total - sc.spotsLeft) / sc.total) * 100)}% Booked
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteClass(sc.id)}
+                        className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
+                        title="Delete Session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-white/5">
-                    <div className="text-left sm:text-right">
-                      <span className="text-xs font-mono text-white block">
-                        {sc.spotsLeft} of {sc.total} spots left
-                      </span>
-                      <span className="text-[11px] text-[#8C8C8C]">
-                        {Math.round(((sc.total - sc.spotsLeft) / sc.total) * 100)}% Booked
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => handleDeleteClass(sc.id)}
-                      className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
-                      title="Delete Session"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-xs text-[#8C8C8C] space-y-2">
+                  <p>No timetable sessions scheduled yet.</p>
+                  <p className="text-white/60">Click 'Schedule Class' above to create a live combine session for athletes.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -826,7 +833,7 @@ export default function AdminDashboard() {
         {(activeTab === "overview" || activeTab === "finances") && (
           <div className="space-y-6 pt-4">
             
-            {/* Circular Donut Analytics: Plan Revenue Breakdown & Floor Zone Allocation */}
+            {/* Real Financial Analytics Donut */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Circular Chart 1: Plan Distribution */}
@@ -844,24 +851,13 @@ export default function AdminDashboard() {
                   <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#262626" strokeWidth="4" />
-                      {/* Black Tier segment */}
-                      <circle
-                        cx="18" cy="18" r="15.9155" fill="none" stroke="#FFFFFF" strokeWidth="4"
-                        strokeDasharray="50 100" strokeDashoffset="0"
-                        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
-                      />
-                      {/* Obsidian Private segment */}
-                      <circle
-                        cx="18" cy="18" r="15.9155" fill="none" stroke="#FBBF24" strokeWidth="4"
-                        strokeDasharray="30 100" strokeDashoffset="-50"
-                        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]"
-                      />
-                      {/* Brave Trial segment */}
-                      <circle
-                        cx="18" cy="18" r="15.9155" fill="none" stroke="#60A5FA" strokeWidth="4"
-                        strokeDasharray="20 100" strokeDashoffset="-80"
-                        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]"
-                      />
+                      {adminStats.recentTransactions.length > 0 && (
+                        <circle
+                          cx="18" cy="18" r="15.9155" fill="none" stroke="#FFFFFF" strokeWidth="4"
+                          strokeDasharray="100 100" strokeDashoffset="0"
+                          className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
+                        />
+                      )}
                     </svg>
                     <div className="absolute text-center">
                       <span className="font-display text-lg font-bold text-white block leading-none">
@@ -904,70 +900,33 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Circular Chart 2: Facility Floor Allocation */}
-              <div className="p-6 bg-[#141414] border border-white/10 rounded-sm space-y-4 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">Spatial Telemetry</span>
-                    <h3 className="font-display text-xl font-bold text-white uppercase">Facility Zone Load</h3>
+              {/* Verified Financial Health Status */}
+              <div className="p-6 bg-[#141414] border border-white/10 rounded-sm space-y-4 shadow-lg flex flex-col justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">Supabase Ledger</span>
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   </div>
-                  <ShieldCheck className="w-4 h-4 text-white/60" />
+                  <h3 className="font-display text-xl font-bold text-white uppercase">Financial Settlement Status</h3>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-around gap-6 pt-2">
-                  {/* Concentric / Segmented SVG Donut */}
-                  <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#262626" strokeWidth="4" />
-                      {/* Striking Rings: 45% */}
-                      <circle
-                        cx="18" cy="18" r="15.9155" fill="none" stroke="#34D399" strokeWidth="4"
-                        strokeDasharray="45 100" strokeDashoffset="0"
-                        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]"
-                      />
-                      {/* Barbell Pit: 35% */}
-                      <circle
-                        cx="18" cy="18" r="15.9155" fill="none" stroke="#FFFFFF" strokeWidth="4"
-                        strokeDasharray="35 100" strokeDashoffset="-45"
-                        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
-                      />
-                      {/* Hydro Recovery: 20% */}
-                      <circle
-                        cx="18" cy="18" r="15.9155" fill="none" stroke="#A78BFA" strokeWidth="4"
-                        strokeDasharray="20 100" strokeDashoffset="-80"
-                        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(167,139,250,0.4)]"
-                      />
-                    </svg>
-                    <div className="absolute text-center">
-                      <span className="font-display text-lg font-bold text-white block leading-none">15,000</span>
-                      <span className="text-[9px] font-mono text-[#8C8C8C] uppercase">SQ FT HQ</span>
-                    </div>
+                <div className="space-y-3 py-2">
+                  <div className="flex justify-between items-center text-xs font-mono border-b border-white/5 pb-2">
+                    <span className="text-[#8C8C8C]">Total Ledger Entries:</span>
+                    <strong className="text-white font-bold">{adminStats.recentTransactions.length} Paid Records</strong>
                   </div>
+                  <div className="flex justify-between items-center text-xs font-mono border-b border-white/5 pb-2">
+                    <span className="text-[#8C8C8C]">Registered Athlete Base:</span>
+                    <strong className="text-white font-bold">{adminStats.activeMembers} Profiles</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-xs font-mono">
+                    <span className="text-[#8C8C8C]">Settled Revenue:</span>
+                    <strong className="text-emerald-400 font-bold">${adminStats.monthlyRevenue.toLocaleString()}</strong>
+                  </div>
+                </div>
 
-                  {/* Legend */}
-                  <div className="space-y-2 text-xs font-mono w-full sm:w-auto">
-                    <div className="flex items-center justify-between sm:justify-start gap-3">
-                      <span className="flex items-center gap-2 text-emerald-300">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                        Striking & Bag Arena
-                      </span>
-                      <strong className="text-white">45% Capacity</strong>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-start gap-3">
-                      <span className="flex items-center gap-2 text-white">
-                        <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_6px_white]" />
-                        Olympic Barbell Floor
-                      </span>
-                      <strong className="text-white">35% Capacity</strong>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-start gap-3">
-                      <span className="flex items-center gap-2 text-purple-300">
-                        <span className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_6px_rgba(167,139,250,0.8)]" />
-                        Sauna & Hydro Suite
-                      </span>
-                      <strong className="text-white">20% Capacity</strong>
-                    </div>
-                  </div>
+                <div className="p-3 bg-white/5 border border-white/10 rounded text-[11px] text-[#8C8C8C]">
+                  All payments and membership subscriptions sync in real-time with your Postgres database.
                 </div>
               </div>
 
@@ -984,24 +943,30 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-[#141414] border border-white/10 rounded-sm divide-y divide-white/10">
-              {adminStats.recentTransactions.map((tx) => (
-                <div key={tx.id} className="p-5 flex items-center justify-between gap-4">
-                  <div>
-                    <h4 className="font-display text-base font-bold text-white uppercase">{tx.member}</h4>
-                    <span className="text-xs text-[#8C8C8C]">{tx.plan} · Ref #{tx.id}</span>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <span className="font-display font-bold text-lg text-white block">{tx.amount}</span>
-                      <span className="text-[11px] text-[#8C8C8C]">{tx.date}</span>
+              {adminStats.recentTransactions && adminStats.recentTransactions.length > 0 ? (
+                adminStats.recentTransactions.map((tx) => (
+                  <div key={tx.id} className="p-5 flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-display text-base font-bold text-white uppercase">{tx.member}</h4>
+                      <span className="text-xs text-[#8C8C8C]">{tx.plan} · Ref #{tx.id}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded text-[10px] uppercase font-mono tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      {tx.status}
-                    </span>
+
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <span className="font-display font-bold text-lg text-white block">{tx.amount}</span>
+                        <span className="text-[11px] text-[#8C8C8C]">{tx.date}</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded text-[10px] uppercase font-mono tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        {tx.status}
+                      </span>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-xs text-[#8C8C8C]">
+                  No transactions recorded yet. When members order or upgrade membership plans, verified ledger records will appear here.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}

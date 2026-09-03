@@ -48,7 +48,7 @@ export function GymProvider({ children }) {
   const [programs] = useState(INITIAL_PROGRAMS);
   const [trainers] = useState(INITIAL_TRAINERS);
   const [memberships] = useState(INITIAL_MEMBERSHIPS);
-  const [schedule, setSchedule] = useState(INITIAL_SCHEDULE);
+  const [schedule, setSchedule] = useState([]);
 
   // User's booked classes
   const [bookings, setBookings] = useState([]);
@@ -105,7 +105,7 @@ export function GymProvider({ children }) {
 
     // Load classes
     const remoteClasses = await fetchClasses();
-    if (remoteClasses && remoteClasses.length > 0) {
+    if (Array.isArray(remoteClasses)) {
       setSchedule(
         remoteClasses.map((c) => ({
           id: c.id,
@@ -117,6 +117,8 @@ export function GymProvider({ children }) {
           total: c.total
         }))
       );
+    } else {
+      setSchedule([]);
     }
 
     // Load consultations
@@ -265,7 +267,7 @@ export function GymProvider({ children }) {
             weightClass: profile.weight_class,
             discipline: profile.discipline
           });
-          loadRemoteData(profile.id);
+          loadRemoteData(profile.id, profile.role);
         }
       }
     });
@@ -290,7 +292,7 @@ export function GymProvider({ children }) {
             weightClass: profile.weight_class,
             discipline: profile.discipline
           });
-          loadRemoteData(profile.id);
+          loadRemoteData(profile.id, profile.role);
         }
       } else if (event === "SIGNED_OUT") {
         // Logged out
@@ -343,8 +345,8 @@ export function GymProvider({ children }) {
 
   // Initial load
   useEffect(() => {
-    loadRemoteData(currentUser?.id);
-  }, [loadRemoteData, currentUser?.id]);
+    loadRemoteData(currentUser?.id, currentUser?.role);
+  }, [loadRemoteData, currentUser?.id, currentUser?.role]);
 
   // ==========================================
   // AUTH METHODS (SUPABASE WITH FALLBACK)
