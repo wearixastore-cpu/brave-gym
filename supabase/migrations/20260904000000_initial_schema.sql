@@ -1,20 +1,8 @@
 -- ==========================================================
 -- BRAVE GYM — SUPABASE PRODUCTION DATABASE & STORAGE SCHEMA
 -- ==========================================================
--- Run this script in your Supabase SQL Editor (1-click run)
--- It provisions:
--- 1. Profiles (linked to auth.users)
--- 2. Classes & Timetable Schedule
--- 3. Member Bookings
--- 4. Workout Progress Logs
--- 5. Athlete Intake Consultation Requests
--- 6. Notifications with Realtime
--- 7. Transactions & Membership Tiers
--- 8. Storage Buckets (avatars, gym-media) with public read access
--- 9. Row Level Security (RLS) policies
--- ==========================================================
+-- Idempotent Migration Script (safe to run multiple times)
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ----------------------------------------------------------
@@ -28,13 +16,13 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   membership TEXT DEFAULT 'Brave Trial',
   status TEXT DEFAULT 'Active',
   renewal_date TEXT DEFAULT '30 Days Free',
-  streak INT DEFAULT 1,
+  streak INT DEFAULT 0,
   sessions_this_month INT DEFAULT 0,
   avatar_url TEXT DEFAULT '/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg',
-  bio TEXT,
+  bio TEXT DEFAULT 'Discipline over motivation. Training for athletic excellence.',
   phone TEXT,
-  weight_class TEXT,
-  discipline TEXT,
+  weight_class TEXT DEFAULT 'Open Weight',
+  discipline TEXT DEFAULT 'General Conditioning & Strength',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -51,12 +39,9 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'role', 'user'),
     CASE WHEN NEW.raw_user_meta_data->>'role' = 'admin' THEN 'Staff Command' ELSE 'Brave Trial' END,
     'Active',
-    CASE WHEN NEW.raw_user_meta_data->>'role' = 'admin' THEN 42 ELSE 1 END,
-    CASE WHEN NEW.raw_user_meta_data->>'role' = 'admin' THEN 24 ELSE 0 END,
-    CASE 
-      WHEN NEW.raw_user_meta_data->>'role' = 'admin' THEN '/media/edgar-chaparro-sHfo3WOgGTU-unsplash.jpg'
-      ELSE '/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg'
-    END
+    0,
+    0,
+    '/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg'
   )
   ON CONFLICT (id) DO UPDATE
   SET email = EXCLUDED.email,
@@ -183,45 +168,57 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
+DROP POLICY IF EXISTS "Public profiles are readable by authenticated users" ON public.profiles;
 CREATE POLICY "Public profiles are readable by authenticated users" 
 ON public.profiles FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 CREATE POLICY "Users can update their own profile" 
 ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
 
--- Classes policies: Anyone can view schedule, authenticated/admin can insert/update/delete
+-- Classes policies
+DROP POLICY IF EXISTS "Anyone can view timetable classes" ON public.classes;
 CREATE POLICY "Anyone can view timetable classes" 
 ON public.classes FOR SELECT TO anon, authenticated USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can manage classes" ON public.classes;
 CREATE POLICY "Authenticated users can manage classes" 
 ON public.classes FOR ALL TO authenticated USING (true);
 
--- Bookings policies: Users see their own bookings
+-- Bookings policies
+DROP POLICY IF EXISTS "Users can view their own bookings" ON public.bookings;
 CREATE POLICY "Users can view their own bookings" 
 ON public.bookings FOR SELECT TO authenticated USING (auth.uid() = user_id OR user_id IS NULL);
 
+DROP POLICY IF EXISTS "Users can create their bookings" ON public.bookings;
 CREATE POLICY "Users can create their bookings" 
 ON public.bookings FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 
+DROP POLICY IF EXISTS "Users can delete their own bookings" ON public.bookings;
 CREATE POLICY "Users can delete their own bookings" 
 ON public.bookings FOR DELETE TO authenticated USING (auth.uid() = user_id OR user_id IS NULL);
 
--- Workout logs policies: Users manage their own logs
+-- Workout logs policies
+DROP POLICY IF EXISTS "Users can manage workout logs" ON public.workout_logs;
 CREATE POLICY "Users can manage workout logs" 
 ON public.workout_logs FOR ALL TO authenticated USING (auth.uid() = user_id OR user_id IS NULL);
 
--- Consultations policies: Anyone can create a consultation request (leads)
+-- Consultations policies
+DROP POLICY IF EXISTS "Anyone can submit a consultation request" ON public.consultations;
 CREATE POLICY "Anyone can submit a consultation request" 
 ON public.consultations FOR INSERT TO anon, authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Authenticated users can view/manage consultations" ON public.consultations;
 CREATE POLICY "Authenticated users can view/manage consultations" 
 ON public.consultations FOR ALL TO authenticated USING (true);
 
--- Notifications policies: Users manage their notifications
+-- Notifications policies
+DROP POLICY IF EXISTS "Users can view and update their notifications" ON public.notifications;
 CREATE POLICY "Users can view and update their notifications" 
 ON public.notifications FOR ALL TO authenticated USING (auth.uid() = user_id OR user_id IS NULL);
 
--- Transactions: Readable by authenticated users (Admin telemetry)
+-- Transactions policies
+DROP POLICY IF EXISTS "Transactions viewable by authenticated users" ON public.transactions;
 CREATE POLICY "Transactions viewable by authenticated users" 
 ON public.transactions FOR ALL TO authenticated USING (true);
 
@@ -236,19 +233,34 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('gym-media', 'gym-media', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
--- Storage policies: Anyone can read avatar images
+DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
 CREATE POLICY "Avatar images are publicly accessible" 
 ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
 
--- Authenticated users can upload avatars
+DROP POLICY IF EXISTS "Authenticated users can upload avatars" ON storage.objects;
 CREATE POLICY "Authenticated users can upload avatars" 
 ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Authenticated users can update their avatars" ON storage.objects;
 CREATE POLICY "Authenticated users can update their avatars" 
 ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars');
 
--- Enable Realtime for notifications and consultations
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.consultations;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.classes;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
+-- Enable Realtime
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+  EXCEPTION WHEN duplicate_object THEN END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.consultations;
+  EXCEPTION WHEN duplicate_object THEN END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.classes;
+  EXCEPTION WHEN duplicate_object THEN END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
+  EXCEPTION WHEN duplicate_object THEN END;
+END $$;
