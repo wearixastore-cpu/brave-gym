@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --gym-obsidian: #0D0D0D;
+    --gym-charcoal: #1A1A1A;
+    --gym-steel: #2E2E2E;
+    --gym-ash: #8C8C8C;
+    --gym-chalk: #F5F5F3;
+    --gym-paper: #FFFFFF;
+    --gym-ink: #111111;
+  }
+
+  body {
+    background-color: var(--gym-obsidian);
+    color: var(--gym-chalk);
+    font-family: 'Satoshi', sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Clash Display', sans-serif;
+  }
+}
+
+/* Keyframes for seamless Marquee */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Pulse glow and subtle breathe */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(255, 255, 255, 0.3);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Custom Chrome interactive highlights */
+.chrome-gradient {
+  background: linear-gradient(135deg, #C9C9C9 0%, #FFFFFF 100%);
+}
+
+.chrome-border {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.chrome-border-hover:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0D0D0D;
+}
+::-webkit-scrollbar-thumb {
+  background: #2E2E2E;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8C8C8C;
+}
+
+/* Glassmorphism surfaces */
+.glass-panel {
+  background: rgba(26, 26, 26, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.text-stroke {
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+  color: transparent;
+}

@@ -1,0 +1,700 @@
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { INITIAL_PROGRAMS, INITIAL_TRAINERS, INITIAL_MEMBERSHIPS, INITIAL_SCHEDULE } from "../lib/mockData";
+import {
+  supabase,
+  isSupabaseConfigured,
+  supabaseSignIn,
+  supabaseSignUp,
+  supabaseSignOut,
+  getProfile,
+  updateProfileData,
+  uploadAvatar,
+  fetchClasses,
+  createClass as sbCreateClass,
+  deleteClass as sbDeleteClass,
+  fetchBookings,
+  createBooking as sbCreateBooking,
+  removeBooking as sbRemoveBooking,
+  fetchWorkoutLogs,
+  insertWorkoutLog as sbInsertWorkoutLog,
+  fetchConsultations,
+  submitConsultation as sbSubmitConsultation,
+  setConsultationStatus as sbSetConsultationStatus,
+  fetchNotifications,
+  markAllNotificationsRead as sbMarkAllNotificationsRead,
+  sendNotification as sbSendNotification
+} from "../lib/supabase";
+
+const GymContext = createContext(null);
+
+export function GymProvider({ children }) {
+  // Current user state (can be null if logged out, or user object)
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem("brave_user");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    // Default demo user: Marcus Cole
+    return {
+      id: "usr-01",
+      name: "Marcus Cole",
+      email: "marcus.c@discipline.com",
+      role: "user", // "user" | "admin"
+      membership: "Black Tier",
+      status: "Active",
+      renewalDate: "Oct 15, 2026",
+      streak: 18,
+      sessionsThisMonth: 14,
+      avatar: "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg"
+    };
+  });
+
+  const [programs] = useState(INITIAL_PROGRAMS);
+  const [trainers] = useState(INITIAL_TRAINERS);
+  const [memberships] = useState(INITIAL_MEMBERSHIPS);
+  const [schedule, setSchedule] = useState(INITIAL_SCHEDULE);
+
+  // User's booked classes
+  const [bookings, setBookings] = useState([
+    {
+      id: "bk-101",
+      classTitle: "Championship Boxing",
+      trainer: "Marcus Vance",
+      date: "Tomorrow, 08:00 AM",
+      status: "Confirmed",
+      room: "Striking Pit 01"
+    },
+    {
+      id: "bk-102",
+      classTitle: "Iron Discipline Strength",
+      trainer: "Elena Rostova",
+      date: "Friday, 05:30 PM",
+      status: "Confirmed",
+      room: "Barbell Arena"
+    }
+  ]);
+
+  // Workout log items
+  const [workoutLogs, setWorkoutLogs] = useState([
+    { id: "log-1", date: "Yesterday", exercise: "Deadlift 5x5", weight: "315 lbs", notes: "Clean velocity, RPE 8" },
+    { id: "log-2", date: "3 days ago", exercise: "Heavy Bag 8 Rounds", weight: "Speed & Combos", notes: "Maintained sharp jab pace" }
+  ]);
+
+  // Consultation Requests sent to Admin
+  const [consultationRequests, setConsultationRequests] = useState(() => {
+    const saved = localStorage.getItem("brave_consultations");
+    return saved ? JSON.parse(saved) : [
+      {
+        id: "req-101",
+        trainerId: "marcus-vance",
+        trainerName: "Marcus Vance",
+        userName: "Sophia Martinez",
+        phone: "+1 (555) 349-8821",
+        address: "744 West End Ave, Apt 4B, Metro Area",
+        serviceType: "1-on-1 Boxing & Kinetic Footwork",
+        customRequirements: "Wants to prepare for amateur Golden Gloves. 3 days/week morning training.",
+        chatMessages: [
+          { sender: "bot", text: "Welcome to Brave Gym Concierge. Which training discipline are you targeting?" },
+          { sender: "user", text: "Championship boxing and sparring preparation." },
+          { sender: "bot", text: "Understood. Coach Marcus Vance has been assigned to your profile." }
+        ],
+        status: "Pending",
+        createdAt: "Today, 09:30 AM"
+      },
+      {
+        id: "req-102",
+        trainerId: "elena-rostova",
+        trainerName: "Elena Rostova",
+        userName: "David Kim",
+        phone: "+1 (555) 882-9901",
+        address: "1200 Industrial Blvd, Suite 10",
+        serviceType: "Olympic Weightlifting & Biomechanics",
+        customRequirements: "Lower back recovery protocol and deadlift technique overhaul.",
+        chatMessages: [
+          { sender: "bot", text: "Welcome to Brave Gym Concierge. Which training discipline are you targeting?" },
+          { sender: "user", text: "Olympic Barbell technique." }
+        ],
+        status: "Contacted",
+        createdAt: "Yesterday, 04:15 PM"
+      }
+    ];
+  });
+
+  // Admin stats
+  const [adminStats, setAdminStats] = useState({
+    monthlyRevenue: 48920,
+    activeMembers: 342,
+    todayOccupancy: 86,
+    newSignupsThisWeek: 28,
+    recentTransactions: [
+      { id: "tx-981", member: "Alex Vance", plan: "Black Tier", amount: "$189", date: "Today, 10:45 AM", status: "Paid" },
+      { id: "tx-982", member: "Sarah Chen", plan: "Obsidian Private", amount: "$349", date: "Today, 09:12 AM", status: "Paid" },
+      { id: "tx-983", member: "David Rossi", plan: "Brave Trial", amount: "$39", date: "Yesterday", status: "Paid" }
+    ]
+  });
+
+  // Real-time notifications
+  const [userNotifications, setUserNotifications] = useState(() => {
+    const saved = localStorage.getItem("brave_notifications");
+    return saved ? JSON.parse(saved) : [
+      {
+        id: "notif-1",
+        title: "Admin Consultation Approved",
+        message: "Coach Marcus Vance confirmed your 1-on-1 Boxing Biomechanics session for Friday 08:00 AM in Striking Pit 01.",
+        time: "10m ago",
+        read: false,
+        type: "admin_response"
+      },
+      {
+        id: "notif-2",
+        title: "18-Day Discipline Streak Active",
+        message: "You've maintained your training regimen for 18 consecutive days. Next tier reward unlocks at 21 days.",
+        time: "2h ago",
+        read: false,
+        type: "streak"
+      },
+      {
+        id: "notif-3",
+        title: "Black Tier Perk Available",
+        message: "Complimentary infrared sauna & cold plunge recovery protocol ready for booking this weekend.",
+        time: "Yesterday",
+        read: true,
+        type: "benefit"
+      }
+    ];
+  });
+
+  // Sync to local cache as fallback
+  useEffect(() => {
+    localStorage.setItem("brave_notifications", JSON.stringify(userNotifications));
+  }, [userNotifications]);
+
+  useEffect(() => {
+    localStorage.setItem("brave_consultations", JSON.stringify(consultationRequests));
+  }, [consultationRequests]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem("brave_user", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("brave_user");
+    }
+  }, [currentUser]);
+
+  // ==========================================================
+  // SUPABASE DATA SYNC: Classes, Consultations, Bookings, Logs
+  // ==========================================================
+  const loadRemoteData = useCallback(async (userId) => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    // Load classes
+    const remoteClasses = await fetchClasses();
+    if (remoteClasses && remoteClasses.length > 0) {
+      setSchedule(
+        remoteClasses.map((c) => ({
+          id: c.id,
+          day: c.day,
+          time: c.time,
+          classTitle: c.class_title,
+          trainer: c.trainer,
+          spotsLeft: c.spots_left,
+          total: c.total
+        }))
+      );
+    }
+
+    // Load consultations
+    const remoteConsultations = await fetchConsultations();
+    if (remoteConsultations && remoteConsultations.length > 0) {
+      setConsultationRequests(
+        remoteConsultations.map((r) => ({
+          id: r.id,
+          trainerId: r.trainer_id,
+          trainerName: r.trainer_name,
+          userName: r.user_name,
+          phone: r.phone,
+          address: r.address,
+          serviceType: r.service_type,
+          customRequirements: r.custom_requirements,
+          chatMessages: r.chat_messages || [],
+          status: r.status,
+          createdAt: r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recently"
+        }))
+      );
+    }
+
+    // If logged in, fetch user-specific data
+    if (userId) {
+      const [remoteBookings, remoteLogs, remoteNotifs] = await Promise.all([
+        fetchBookings(userId),
+        fetchWorkoutLogs(userId),
+        fetchNotifications(userId)
+      ]);
+
+      if (remoteBookings && remoteBookings.length > 0) {
+        setBookings(
+          remoteBookings.map((b) => ({
+            id: b.id,
+            classTitle: b.class_title,
+            trainer: b.trainer,
+            date: b.date,
+            room: b.room,
+            status: b.status
+          }))
+        );
+      }
+
+      if (remoteLogs && remoteLogs.length > 0) {
+        setWorkoutLogs(
+          remoteLogs.map((l) => ({
+            id: l.id,
+            date: l.date,
+            exercise: l.exercise,
+            weight: l.weight,
+            notes: l.notes
+          }))
+        );
+      }
+
+      if (remoteNotifs && remoteNotifs.length > 0) {
+        setUserNotifications(
+          remoteNotifs.map((n) => ({
+            id: n.id,
+            title: n.title,
+            message: n.message,
+            read: n.read,
+            type: n.type,
+            time: n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Recently"
+          }))
+        );
+      }
+    }
+  }, []);
+
+  // Listen to Supabase Auth state changes
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    // Fetch active session on mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await getProfile(session.user.id);
+        if (profile) {
+          setCurrentUser({
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            role: profile.role || "user",
+            membership: profile.membership || "Black Tier",
+            status: profile.status || "Active",
+            renewalDate: profile.renewal_date || "Dec 31, 2026",
+            streak: profile.streak || 1,
+            sessionsThisMonth: profile.sessions_this_month || 0,
+            avatar: profile.avatar_url || "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg",
+            bio: profile.bio,
+            phone: profile.phone,
+            weightClass: profile.weight_class,
+            discipline: profile.discipline
+          });
+          loadRemoteData(profile.id);
+        }
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const profile = await getProfile(session.user.id);
+        if (profile) {
+          setCurrentUser({
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            role: profile.role || "user",
+            membership: profile.membership || "Black Tier",
+            status: profile.status || "Active",
+            renewalDate: profile.renewal_date || "Dec 31, 2026",
+            streak: profile.streak || 1,
+            sessionsThisMonth: profile.sessions_this_month || 0,
+            avatar: profile.avatar_url || "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg",
+            bio: profile.bio,
+            phone: profile.phone,
+            weightClass: profile.weight_class,
+            discipline: profile.discipline
+          });
+          loadRemoteData(profile.id);
+        }
+      } else if (event === "SIGNED_OUT") {
+        // Logged out
+      }
+    });
+
+    // Realtime channel subscriptions
+    const channel = supabase
+      .channel("brave-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
+        const newN = payload.new;
+        setUserNotifications((prev) => [
+          {
+            id: newN.id,
+            title: newN.title,
+            message: newN.message,
+            type: newN.type,
+            read: newN.read,
+            time: "Just now"
+          },
+          ...prev
+        ]);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "consultations" }, (payload) => {
+        const newC = payload.new;
+        setConsultationRequests((prev) => [
+          {
+            id: newC.id,
+            trainerId: newC.trainer_id,
+            trainerName: newC.trainer_name,
+            userName: newC.user_name,
+            phone: newC.phone,
+            address: newC.address,
+            serviceType: newC.service_type,
+            customRequirements: newC.custom_requirements,
+            chatMessages: newC.chat_messages || [],
+            status: newC.status,
+            createdAt: "Just now"
+          },
+          ...prev
+        ]);
+      })
+      .subscribe();
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+      supabase.removeChannel(channel);
+    };
+  }, [loadRemoteData]);
+
+  // Initial load
+  useEffect(() => {
+    loadRemoteData(currentUser?.id);
+  }, [loadRemoteData, currentUser?.id]);
+
+  // ==========================================
+  // AUTH METHODS (SUPABASE WITH FALLBACK)
+  // ==========================================
+
+  const login = async (email, password, role = "user") => {
+    const isAdmin = email.toLowerCase().includes("admin") || role === "admin";
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabaseSignIn(email, password);
+      if (error) {
+        throw error;
+      }
+      if (data?.user) {
+        const profile = await getProfile(data.user.id);
+        const userObj = {
+          id: data.user.id,
+          email: data.user.email,
+          name: profile?.name || (isAdmin ? "Admin Director" : email.split("@")[0]),
+          role: profile?.role || (isAdmin ? "admin" : "user"),
+          membership: profile?.membership || (isAdmin ? "Staff Command" : "Black Tier"),
+          status: profile?.status || "Active",
+          renewalDate: profile?.renewal_date || "Dec 31, 2026",
+          streak: profile?.streak ?? (isAdmin ? 42 : 1),
+          sessionsThisMonth: profile?.sessions_this_month ?? (isAdmin ? 24 : 3),
+          avatar: profile?.avatar_url || (isAdmin 
+            ? "/media/edgar-chaparro-sHfo3WOgGTU-unsplash.jpg"
+            : "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg")
+        };
+        setCurrentUser(userObj);
+        return userObj;
+      }
+    }
+
+    // Local / Offline fallback mode
+    const userObj = {
+      id: "usr-" + Date.now().toString().slice(-4),
+      name: isAdmin ? "Admin Director" : (email.split("@")[0].replace(".", " ") || "Brave Member"),
+      email: email,
+      role: isAdmin ? "admin" : "user",
+      membership: isAdmin ? "Staff Command" : "Black Tier",
+      status: "Active",
+      renewalDate: "Dec 31, 2026",
+      streak: isAdmin ? 42 : 1,
+      sessionsThisMonth: isAdmin ? 24 : 3,
+      avatar: isAdmin 
+        ? "/media/edgar-chaparro-sHfo3WOgGTU-unsplash.jpg"
+        : "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg"
+    };
+    setCurrentUser(userObj);
+    return userObj;
+  };
+
+  const register = async (name, email, password, role = "user") => {
+    const isAdmin = email.toLowerCase().includes("admin") || role === "admin";
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabaseSignUp(email, password, {
+        name,
+        role: isAdmin ? "admin" : role
+      });
+      if (error) {
+        throw error;
+      }
+      if (data?.user) {
+        const userObj = {
+          id: data.user.id,
+          name: name || "New Athlete",
+          email: email,
+          role: isAdmin ? "admin" : role,
+          membership: "Brave Trial",
+          status: "Active",
+          renewalDate: "30 Days Free",
+          streak: 1,
+          sessionsThisMonth: 0,
+          avatar: "/media/david-guliciuc-o2zrjlM5s5o-unsplash.jpg"
+        };
+        setCurrentUser(userObj);
+        return userObj;
+      }
+    }
+
+    // Local / Offline fallback mode
+    const userObj = {
+      id: "usr-" + Date.now().toString().slice(-4),
+      name: name || "New Athlete",
+      email: email,
+      role: isAdmin ? "admin" : "user",
+      membership: "Brave Trial",
+      status: "Active",
+      renewalDate: "30 Days Free",
+      streak: 1,
+      sessionsThisMonth: 0,
+      avatar: "/media/david-guliciuc-o2zrjlM5s5o-unsplash.jpg"
+    };
+    setCurrentUser(userObj);
+    return userObj;
+  };
+
+  const logout = async () => {
+    if (isSupabaseConfigured) {
+      await supabaseSignOut();
+    }
+    setCurrentUser(null);
+  };
+
+  // ==========================================
+  // CLASS BOOKINGS
+  // ==========================================
+
+  const bookClass = async (scheduleItem) => {
+    const newBooking = {
+      id: "bk-" + Date.now(),
+      classTitle: scheduleItem.classTitle,
+      trainer: scheduleItem.trainer,
+      date: `${scheduleItem.day}, ${scheduleItem.time}`,
+      status: "Confirmed",
+      room: "Main Athletic Floor"
+    };
+    setBookings((prev) => [newBooking, ...prev]);
+
+    setSchedule((prev) =>
+      prev.map((sc) => (sc.id === scheduleItem.id ? { ...sc, spotsLeft: Math.max(0, sc.spotsLeft - 1) } : sc))
+    );
+
+    if (isSupabaseConfigured && currentUser?.id) {
+      sbCreateBooking(currentUser.id, newBooking);
+    }
+    return newBooking;
+  };
+
+  const cancelBooking = async (bookingId) => {
+    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+    if (isSupabaseConfigured) {
+      sbRemoveBooking(bookingId);
+    }
+  };
+
+  // ==========================================
+  // WORKOUT LOGS
+  // ==========================================
+
+  const addWorkoutLog = async (entry) => {
+    const newLog = { id: "log-" + Date.now(), ...entry };
+    setWorkoutLogs((prev) => [newLog, ...prev]);
+
+    if (isSupabaseConfigured && currentUser?.id) {
+      sbInsertWorkoutLog(currentUser.id, entry);
+    }
+  };
+
+  // ==========================================
+  // CONSULTATIONS & LEADS
+  // ==========================================
+
+  const addConsultationRequest = async (requestData) => {
+    const newReq = {
+      id: "req-" + Date.now().toString().slice(-4),
+      createdAt: "Just now",
+      status: "Pending",
+      userId: currentUser?.id,
+      ...requestData
+    };
+    setConsultationRequests((prev) => [newReq, ...prev]);
+
+    if (isSupabaseConfigured) {
+      sbSubmitConsultation(newReq);
+    }
+    return newReq;
+  };
+
+  const updateConsultationStatus = async (id, newStatus) => {
+    setConsultationRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+    );
+
+    if (isSupabaseConfigured) {
+      sbSetConsultationStatus(id, newStatus);
+    }
+  };
+
+  // ==========================================
+  // NOTIFICATIONS
+  // ==========================================
+
+  const markNotificationsAsRead = async () => {
+    setUserNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    if (isSupabaseConfigured && currentUser?.id) {
+      sbMarkAllNotificationsRead(currentUser.id);
+    }
+  };
+
+  const createNotification = async (title, message, type = "admin_response") => {
+    const newNotif = {
+      id: "notif-" + Date.now(),
+      title,
+      message,
+      type,
+      read: false,
+      time: "Just now"
+    };
+    setUserNotifications((prev) => [newNotif, ...prev]);
+
+    if (isSupabaseConfigured && currentUser?.id) {
+      sbSendNotification(currentUser.id, title, message, type);
+    }
+  };
+
+  // ==========================================
+  // PROFILE & STORAGE AVATAR
+  // ==========================================
+
+  const updateProfile = async (updatedFields) => {
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updatedFields };
+      localStorage.setItem("brave_user", JSON.stringify(updated));
+      return updated;
+    });
+
+    if (isSupabaseConfigured && currentUser?.id) {
+      const dbFields = {};
+      if (updatedFields.name) dbFields.name = updatedFields.name;
+      if (updatedFields.avatar) dbFields.avatar_url = updatedFields.avatar;
+      if (updatedFields.bio) dbFields.bio = updatedFields.bio;
+      if (updatedFields.phone) dbFields.phone = updatedFields.phone;
+      if (updatedFields.weightClass) dbFields.weight_class = updatedFields.weightClass;
+      if (updatedFields.discipline) dbFields.discipline = updatedFields.discipline;
+      if (updatedFields.membership) dbFields.membership = updatedFields.membership;
+      if (updatedFields.status) dbFields.status = updatedFields.status;
+
+      updateProfileData(currentUser.id, dbFields);
+    }
+  };
+
+  // Upload Avatar to Supabase Storage
+  const uploadUserAvatar = async (file) => {
+    if (isSupabaseConfigured && currentUser?.id && file) {
+      const { url, error } = await uploadAvatar(currentUser.id, file);
+      if (!error && url) {
+        updateProfile({ avatar: url });
+        return url;
+      }
+    }
+    return null;
+  };
+
+  // ==========================================
+  // TIMETABLE ADMIN ACTIONS
+  // ==========================================
+
+  const addScheduleClass = async (classData) => {
+    const newEntry = {
+      id: "sc-" + Date.now(),
+      day: classData.day,
+      time: classData.time,
+      classTitle: classData.classTitle,
+      trainer: classData.trainer,
+      spotsLeft: Number(classData.total),
+      total: Number(classData.total)
+    };
+    setSchedule((prev) => [newEntry, ...prev]);
+
+    if (isSupabaseConfigured) {
+      sbCreateClass(newEntry);
+    }
+  };
+
+  const removeScheduleClass = async (classId) => {
+    setSchedule((prev) => prev.filter((sc) => sc.id !== classId));
+    if (isSupabaseConfigured) {
+      sbDeleteClass(classId);
+    }
+  };
+
+  return (
+    <GymContext.Provider
+      value={{
+        isSupabaseConfigured,
+        currentUser,
+        setCurrentUser,
+        login,
+        register,
+        logout,
+        programs,
+        trainers,
+        memberships,
+        schedule,
+        setSchedule,
+        addScheduleClass,
+        removeScheduleClass,
+        bookings,
+        bookClass,
+        cancelBooking,
+        workoutLogs,
+        addWorkoutLog,
+        consultationRequests,
+        addConsultationRequest,
+        updateConsultationStatus,
+        userNotifications,
+        markNotificationsAsRead,
+        createNotification,
+        updateProfile,
+        uploadUserAvatar,
+        adminStats,
+        setAdminStats
+      }}
+    >
+      {children}
+    </GymContext.Provider>
+  );
+}
+
+export const useGym = () => {
+  const ctx = useContext(GymContext);
+  if (!ctx) throw new Error("useGym must be used inside GymProvider");
+  return ctx;
+};
