@@ -53,12 +53,12 @@ export default function UserDashboard() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   
   const [profileForm, setProfileForm] = useState({
-    name: currentUser?.name || "Marcus Vance Athlete",
-    email: currentUser?.email || "athlete@bravegym.com",
+    name: currentUser?.name || "",
+    email: currentUser?.email || "",
     avatar: currentUser?.avatar || "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg",
-    bio: "Dedicated athlete focusing on explosive striking conditioning and Olympic barbell strength.",
-    weightClass: "Middleweight (75 kg)",
-    discipline: "Championship Boxing & Biomechanics"
+    bio: currentUser?.bio || "Discipline over motivation. Training for athletic excellence.",
+    weightClass: currentUser?.weightClass || "Open Weight",
+    discipline: currentUser?.discipline || "General Conditioning & Strength"
   });
 
   const availableAvatars = [
@@ -194,7 +194,7 @@ export default function UserDashboard() {
               <span className="text-[11px] uppercase font-mono tracking-wider text-[#8C8C8C] block">Discipline Streak</span>
               <div className="flex items-center gap-2 text-white font-display text-xl sm:text-2xl font-bold">
                 <Flame className="w-5 h-5 text-amber-400 fill-amber-400 animate-pulse" />
-                <span>{currentUser?.streak || 18} Days</span>
+                <span>{currentUser?.streak || 0} Days</span>
               </div>
             </div>
 
@@ -202,7 +202,7 @@ export default function UserDashboard() {
               <span className="text-[11px] uppercase font-mono tracking-wider text-[#8C8C8C] block">Month Volume</span>
               <div className="flex items-center gap-2 text-white font-display text-2xl font-bold">
                 <Trophy className="w-5 h-5 text-white/80" />
-                <span>{currentUser?.sessionsThisMonth || 14} Sessions</span>
+                <span>{currentUser?.sessionsThisMonth || 0} Sessions</span>
               </div>
             </div>
           </div>

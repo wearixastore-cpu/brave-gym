@@ -8,7 +8,6 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { register } = useGym();
@@ -24,7 +23,7 @@ export default function Register() {
     try {
       setLoading(true);
       setError("");
-      const user = await register(name, email, password, role);
+      const user = await register(name, email, password, "user");
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
 
       if (user.role === "admin") {
@@ -145,20 +144,6 @@ export default function Register() {
                   className="w-full pl-10 pr-4 py-2.5 bg-[#1C1C1C] border border-white/15 rounded text-white text-sm focus:outline-none focus:border-white transition-colors"
                 />
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="register-role" className="uppercase font-mono text-[#8C8C8C] block">Account Classification</label>
-              <select
-                id="register-role"
-                name="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-2.5 bg-[#1C1C1C] border border-white/15 rounded text-white text-sm focus:outline-none focus:border-white transition-colors"
-              >
-                <option value="user">Athletic Member</option>
-                <option value="admin">Gym Staff / Administrator</option>
-              </select>
             </div>
 
             <button

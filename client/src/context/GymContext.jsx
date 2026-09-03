@@ -47,113 +47,30 @@ export function GymProvider({ children }) {
   const [schedule, setSchedule] = useState(INITIAL_SCHEDULE);
 
   // User's booked classes
-  const [bookings, setBookings] = useState([
-    {
-      id: "bk-101",
-      classTitle: "Championship Boxing",
-      trainer: "Marcus Vance",
-      date: "Tomorrow, 08:00 AM",
-      status: "Confirmed",
-      room: "Striking Pit 01"
-    },
-    {
-      id: "bk-102",
-      classTitle: "Iron Discipline Strength",
-      trainer: "Elena Rostova",
-      date: "Friday, 05:30 PM",
-      status: "Confirmed",
-      room: "Barbell Arena"
-    }
-  ]);
+  const [bookings, setBookings] = useState([]);
 
   // Workout log items
-  const [workoutLogs, setWorkoutLogs] = useState([
-    { id: "log-1", date: "Yesterday", exercise: "Deadlift 5x5", weight: "315 lbs", notes: "Clean velocity, RPE 8" },
-    { id: "log-2", date: "3 days ago", exercise: "Heavy Bag 8 Rounds", weight: "Speed & Combos", notes: "Maintained sharp jab pace" }
-  ]);
+  const [workoutLogs, setWorkoutLogs] = useState([]);
 
   // Consultation Requests sent to Admin
   const [consultationRequests, setConsultationRequests] = useState(() => {
     const saved = localStorage.getItem("brave_consultations");
-    return saved ? JSON.parse(saved) : [
-      {
-        id: "req-101",
-        trainerId: "marcus-vance",
-        trainerName: "Marcus Vance",
-        userName: "Sophia Martinez",
-        phone: "+1 (555) 349-8821",
-        address: "744 West End Ave, Apt 4B, Metro Area",
-        serviceType: "1-on-1 Boxing & Kinetic Footwork",
-        customRequirements: "Wants to prepare for amateur Golden Gloves. 3 days/week morning training.",
-        chatMessages: [
-          { sender: "bot", text: "Welcome to Brave Gym Concierge. Which training discipline are you targeting?" },
-          { sender: "user", text: "Championship boxing and sparring preparation." },
-          { sender: "bot", text: "Understood. Coach Marcus Vance has been assigned to your profile." }
-        ],
-        status: "Pending",
-        createdAt: "Today, 09:30 AM"
-      },
-      {
-        id: "req-102",
-        trainerId: "elena-rostova",
-        trainerName: "Elena Rostova",
-        userName: "David Kim",
-        phone: "+1 (555) 882-9901",
-        address: "1200 Industrial Blvd, Suite 10",
-        serviceType: "Olympic Weightlifting & Biomechanics",
-        customRequirements: "Lower back recovery protocol and deadlift technique overhaul.",
-        chatMessages: [
-          { sender: "bot", text: "Welcome to Brave Gym Concierge. Which training discipline are you targeting?" },
-          { sender: "user", text: "Olympic Barbell technique." }
-        ],
-        status: "Contacted",
-        createdAt: "Yesterday, 04:15 PM"
-      }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Admin stats
   const [adminStats, setAdminStats] = useState({
-    monthlyRevenue: 48920,
-    activeMembers: 342,
-    todayOccupancy: 86,
-    newSignupsThisWeek: 28,
-    recentTransactions: [
-      { id: "tx-981", member: "Alex Vance", plan: "Black Tier", amount: "$189", date: "Today, 10:45 AM", status: "Paid" },
-      { id: "tx-982", member: "Sarah Chen", plan: "Obsidian Private", amount: "$349", date: "Today, 09:12 AM", status: "Paid" },
-      { id: "tx-983", member: "David Rossi", plan: "Brave Trial", amount: "$39", date: "Yesterday", status: "Paid" }
-    ]
+    monthlyRevenue: 0,
+    activeMembers: 0,
+    todayOccupancy: 0,
+    newSignupsThisWeek: 0,
+    recentTransactions: []
   });
 
   // Real-time notifications
   const [userNotifications, setUserNotifications] = useState(() => {
     const saved = localStorage.getItem("brave_notifications");
-    return saved ? JSON.parse(saved) : [
-      {
-        id: "notif-1",
-        title: "Admin Consultation Approved",
-        message: "Coach Marcus Vance confirmed your 1-on-1 Boxing Biomechanics session for Friday 08:00 AM in Striking Pit 01.",
-        time: "10m ago",
-        read: false,
-        type: "admin_response"
-      },
-      {
-        id: "notif-2",
-        title: "18-Day Discipline Streak Active",
-        message: "You've maintained your training regimen for 18 consecutive days. Next tier reward unlocks at 21 days.",
-        time: "2h ago",
-        read: false,
-        type: "streak"
-      },
-      {
-        id: "notif-3",
-        title: "Black Tier Perk Available",
-        message: "Complimentary infrared sauna & cold plunge recovery protocol ready for booking this weekend.",
-        time: "Yesterday",
-        read: true,
-        type: "benefit"
-      }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Sync to local cache as fallback
