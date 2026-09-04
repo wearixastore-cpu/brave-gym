@@ -381,6 +381,24 @@ export function GymProvider({ children }) {
           ...prev
         ]);
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "membership_tiers" }, async () => {
+        const remoteTiers = await fetchMembershipTiers();
+        if (Array.isArray(remoteTiers)) {
+          const mapped = remoteTiers.map((t) => ({
+            id: t.id,
+            name: t.name,
+            price: Number(t.price),
+            interval: t.interval || t.billing || "monthly",
+            billing: t.billing || t.interval || "monthly",
+            description: t.description || "",
+            features: Array.isArray(t.features) ? t.features : [],
+            popular: !!t.popular,
+            cta: t.cta || `Claim ${t.name}`
+          }));
+          setMemberships(mapped);
+          localStorage.setItem("brave_memberships", JSON.stringify(mapped));
+        }
+      })
       .subscribe();
 
     return () => {

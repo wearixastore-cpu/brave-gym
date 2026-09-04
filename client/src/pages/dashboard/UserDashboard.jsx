@@ -63,6 +63,21 @@ export default function UserDashboard() {
     discipline: currentUser?.discipline || "General Conditioning & Strength"
   });
 
+  // Keep profileForm in sync with currentUser
+  React.useEffect(() => {
+    if (currentUser) {
+      setProfileForm((prev) => ({
+        ...prev,
+        name: currentUser.name || prev.name,
+        email: currentUser.email || prev.email,
+        avatar: currentUser.avatar || prev.avatar,
+        bio: currentUser.bio || prev.bio,
+        weightClass: currentUser.weightClass || prev.weightClass,
+        discipline: currentUser.discipline || prev.discipline
+      }));
+    }
+  }, [currentUser]);
+
   const availableAvatars = [
     "/media/chris-kendall-sJ6az6-T1u8-unsplash.jpg",
     "/media/david-guliciuc-o2zrjlM5s5o-unsplash.jpg",
