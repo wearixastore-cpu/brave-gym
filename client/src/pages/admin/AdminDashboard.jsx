@@ -228,7 +228,9 @@ export default function AdminDashboard() {
     <div className="pt-20 bg-[#0A0A0A] min-h-screen text-white flex">
       
       {/* 🧭 Modern Real-Time Sticky Admin Sidebar (Desktop) */}
-      <aside className={`transition-all duration-300 bg-[#121212] border-r border-white/10 hidden md:flex flex-col justify-between shrink-0 z-30 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto ${
+      <aside 
+        data-lenis-prevent
+        className={`transition-all duration-300 bg-[#121212] border-r border-white/10 hidden md:flex flex-col justify-between shrink-0 z-30 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain ${
         sidebarCollapsed ? "w-20" : "w-72"
       }`}>
         {/* Top Header inside Sidebar */}
