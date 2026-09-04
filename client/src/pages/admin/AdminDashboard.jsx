@@ -945,35 +945,53 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Legend */}
+                  {/* Dynamic Legend based on active tiers or actual orders */}
                   <div className="space-y-2 text-xs font-mono w-full sm:w-auto">
-                    <div className="flex items-center justify-between sm:justify-start gap-3">
-                      <span className="flex items-center gap-2 text-white">
-                        <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_6px_white]" />
-                        Black Tier
-                      </span>
-                      <strong className="text-white">
-                        {adminStats.recentTransactions.filter(t => t.plan?.toLowerCase().includes("black")).length} Orders
-                      </strong>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-start gap-3">
-                      <span className="flex items-center gap-2 text-amber-300">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                        Obsidian Private
-                      </span>
-                      <strong className="text-white">
-                        {adminStats.recentTransactions.filter(t => t.plan?.toLowerCase().includes("obsidian")).length} Orders
-                      </strong>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-start gap-3">
-                      <span className="flex items-center gap-2 text-blue-300">
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
-                        Brave Trial Passes
-                      </span>
-                      <strong className="text-white">
-                        {adminStats.recentTransactions.filter(t => t.plan?.toLowerCase().includes("trial")).length} Orders
-                      </strong>
-                    </div>
+                    {totalTxCount > 0 ? (
+                      <>
+                        {blackTierCount > 0 && (
+                          <div className="flex items-center justify-between sm:justify-start gap-3">
+                            <span className="flex items-center gap-2 text-white">
+                              <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_6px_white]" />
+                              Black Tier
+                            </span>
+                            <strong className="text-white">{blackTierCount} Orders ({Math.round(blackTierPct)}%)</strong>
+                          </div>
+                        )}
+                        {obsidianTierCount > 0 && (
+                          <div className="flex items-center justify-between sm:justify-start gap-3">
+                            <span className="flex items-center gap-2 text-amber-300">
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                              Obsidian Private
+                            </span>
+                            <strong className="text-white">{obsidianTierCount} Orders ({Math.round(obsidianTierPct)}%)</strong>
+                          </div>
+                        )}
+                        {trialTierCount > 0 && (
+                          <div className="flex items-center justify-between sm:justify-start gap-3">
+                            <span className="flex items-center gap-2 text-blue-300">
+                              <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
+                              Brave Trial Passes
+                            </span>
+                            <strong className="text-white">{trialTierCount} Orders ({Math.round(trialTierPct)}%)</strong>
+                          </div>
+                        )}
+                        {otherTierCount > 0 && (
+                          <div className="flex items-center justify-between sm:justify-start gap-3">
+                            <span className="flex items-center gap-2 text-emerald-300">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                              Custom Tiers
+                            </span>
+                            <strong className="text-white">{otherTierCount} Orders ({Math.round(otherTierPct)}%)</strong>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-[#8C8C8C] text-[11px] space-y-1">
+                        <p className="text-white/80 font-semibold">Fresh Ledger · Zero Orders</p>
+                        <p>When an athlete orders a membership tier or books a paid session, live distribution slices appear here.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
