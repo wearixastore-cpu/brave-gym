@@ -224,6 +224,32 @@ export default function AdminDashboard() {
 
   const [mobileAdminMenu, setMobileAdminMenu] = useState(false);
 
+  // Dynamic calculations for Revenue and Booking Gauges
+  const revenueValue = adminStats?.monthlyRevenue || 0;
+  // Adaptive target so gauge fills dynamically as numbers increase:
+  const revenueTarget = Math.max(1000, Math.ceil(Math.max(revenueValue, 1) / 500) * 500);
+  const revenuePercent = revenueValue > 0 ? Math.min(100, Math.round((revenueValue / revenueTarget) * 100)) : 0;
+
+  const totalBookingsCount = adminBookings?.length || 0;
+  const bookingsTarget = Math.max(10, Math.ceil(Math.max(totalBookingsCount, 1) / 10) * 10);
+  const bookingsPercent = totalBookingsCount > 0 ? Math.min(100, Math.round((totalBookingsCount / bookingsTarget) * 100)) : 0;
+
+  const activeMembersCount = adminStats?.activeMembers || 0;
+  const membersTarget = Math.max(10, Math.ceil(Math.max(activeMembersCount, 1) / 10) * 10);
+  const membersPercent = activeMembersCount > 0 ? Math.min(100, Math.round((activeMembersCount / membersTarget) * 100)) : 0;
+
+  // Real membership tier breakdown from verified transactions
+  const totalTxCount = adminStats?.recentTransactions?.length || 0;
+  const blackTierCount = (adminStats?.recentTransactions || []).filter(t => t.plan?.toLowerCase().includes("black")).length;
+  const obsidianTierCount = (adminStats?.recentTransactions || []).filter(t => t.plan?.toLowerCase().includes("obsidian")).length;
+  const trialTierCount = (adminStats?.recentTransactions || []).filter(t => t.plan?.toLowerCase().includes("trial")).length;
+  const otherTierCount = Math.max(0, totalTxCount - blackTierCount - obsidianTierCount - trialTierCount);
+
+  const blackTierPct = totalTxCount > 0 ? (blackTierCount / totalTxCount) * 100 : 0;
+  const obsidianTierPct = totalTxCount > 0 ? (obsidianTierCount / totalTxCount) * 100 : 0;
+  const trialTierPct = totalTxCount > 0 ? (trialTierCount / totalTxCount) * 100 : 0;
+  const otherTierPct = totalTxCount > 0 ? (otherTierCount / totalTxCount) * 100 : 0;
+
   return (
     <div className="pt-20 bg-[#0A0A0A] min-h-screen text-white flex">
       
@@ -488,10 +514,10 @@ export default function AdminDashboard() {
                 <span>Monthly Revenue</span>
               </div>
               <div className="font-display text-2xl xl:text-3xl font-extrabold text-white whitespace-nowrap">
-                ${adminStats.monthlyRevenue.toLocaleString()}
+                ${revenueValue.toLocaleString()}
               </div>
               <p className="text-[10px] text-emerald-400 font-mono whitespace-nowrap">
-                {adminStats.recentTransactions.length} Verified {adminStats.recentTransactions.length === 1 ? "Order" : "Orders"}
+                Target: ${revenueTarget.toLocaleString()} ({revenuePercent}%)
               </p>
             </div>
 
@@ -513,7 +539,7 @@ export default function AdminDashboard() {
                   r="38"
                   className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.7)] transition-all duration-1000 ease-out"
                   strokeDasharray={2 * Math.PI * 38}
-                  strokeDashoffset={2 * Math.PI * 38 * (1 - Math.min(1, Math.max(0.1, adminStats.monthlyRevenue / 5000)))}
+                  strokeDashoffset={2 * Math.PI * 38 * (1 - revenuePercent / 100)}
                   strokeWidth="8"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -521,7 +547,7 @@ export default function AdminDashboard() {
                 />
               </svg>
               <span className="absolute font-mono text-[10px] font-bold text-emerald-400">
-                {Math.min(100, Math.round((adminStats.monthlyRevenue / 5000) * 100))}%
+                {revenuePercent}%
               </span>
             </div>
           </div>
@@ -534,10 +560,10 @@ export default function AdminDashboard() {
                 <span>Active Athletes</span>
               </div>
               <div className="font-display text-2xl xl:text-3xl font-extrabold text-white">
-                {adminStats.activeMembers}
+                {activeMembersCount}
               </div>
               <p className="text-[10px] text-white/60 whitespace-nowrap">
-                Registered profiles
+                Target: {membersTarget} ({membersPercent}%)
               </p>
             </div>
 
@@ -559,7 +585,7 @@ export default function AdminDashboard() {
                   r="38"
                   className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)] transition-all duration-1000 ease-out"
                   strokeDasharray={2 * Math.PI * 38}
-                  strokeDashoffset={2 * Math.PI * 38 * (1 - Math.min(1, Math.max(0.1, adminStats.activeMembers / 20)))}
+                  strokeDashoffset={2 * Math.PI * 38 * (1 - membersPercent / 100)}
                   strokeWidth="8"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -567,7 +593,7 @@ export default function AdminDashboard() {
                 />
               </svg>
               <span className="absolute font-mono text-[10px] font-bold text-amber-400">
-                {adminStats.activeMembers}
+                {membersPercent}%
               </span>
             </div>
           </div>
@@ -580,9 +606,11 @@ export default function AdminDashboard() {
                 <span>Total Bookings</span>
               </div>
               <div className="font-display text-2xl xl:text-3xl font-extrabold text-white">
-                {adminBookings?.length || 0}
+                {totalBookingsCount}
               </div>
-              <p className="text-[10px] text-[#8C8C8C] whitespace-nowrap">Live athlete reservations</p>
+              <p className="text-[10px] text-blue-400 font-mono whitespace-nowrap">
+                Capacity: {bookingsTarget} ({bookingsPercent}%)
+              </p>
             </div>
 
             {/* Circular Gauge */}
@@ -603,7 +631,7 @@ export default function AdminDashboard() {
                   r="38"
                   className="text-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.7)] transition-all duration-1000 ease-out"
                   strokeDasharray={2 * Math.PI * 38}
-                  strokeDashoffset={2 * Math.PI * 38 * (1 - Math.min(1, Math.max(0.1, (adminBookings?.length || 0) / 20)))}
+                  strokeDashoffset={2 * Math.PI * 38 * (1 - bookingsPercent / 100)}
                   strokeWidth="8"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -611,7 +639,7 @@ export default function AdminDashboard() {
                 />
               </svg>
               <span className="absolute font-mono text-[10px] font-bold text-blue-400">
-                {adminBookings?.length || 0}
+                {bookingsPercent}%
               </span>
             </div>
           </div>
@@ -862,17 +890,50 @@ export default function AdminDashboard() {
                   <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#262626" strokeWidth="4" />
-                      {adminStats.recentTransactions.length > 0 && (
-                        <circle
-                          cx="18" cy="18" r="15.9155" fill="none" stroke="#FFFFFF" strokeWidth="4"
-                          strokeDasharray="100 100" strokeDashoffset="0"
-                          className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
-                        />
-                      )}
+                      {totalTxCount > 0 ? (
+                        <>
+                          {/* Black Tier Slice (White) */}
+                          {blackTierPct > 0 && (
+                            <circle
+                              cx="18" cy="18" r="15.9155" fill="none" stroke="#FFFFFF" strokeWidth="4"
+                              strokeDasharray={`${blackTierPct} ${100 - blackTierPct}`}
+                              strokeDashoffset="0"
+                              className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                            />
+                          )}
+                          {/* Obsidian Tier Slice (Amber) */}
+                          {obsidianTierPct > 0 && (
+                            <circle
+                              cx="18" cy="18" r="15.9155" fill="none" stroke="#FBBF24" strokeWidth="4"
+                              strokeDasharray={`${obsidianTierPct} ${100 - obsidianTierPct}`}
+                              strokeDashoffset={`-${blackTierPct}`}
+                              className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]"
+                            />
+                          )}
+                          {/* Trial Passes Slice (Blue) */}
+                          {trialTierPct > 0 && (
+                            <circle
+                              cx="18" cy="18" r="15.9155" fill="none" stroke="#60A5FA" strokeWidth="4"
+                              strokeDasharray={`${trialTierPct} ${100 - trialTierPct}`}
+                              strokeDashoffset={`-${blackTierPct + obsidianTierPct}`}
+                              className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(96,165,250,0.6)]"
+                            />
+                          )}
+                          {/* Other Custom Tiers (Emerald) */}
+                          {otherTierPct > 0 && (
+                            <circle
+                              cx="18" cy="18" r="15.9155" fill="none" stroke="#34D399" strokeWidth="4"
+                              strokeDasharray={`${otherTierPct} ${100 - otherTierPct}`}
+                              strokeDashoffset={`-${blackTierPct + obsidianTierPct + trialTierPct}`}
+                              className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]"
+                            />
+                          )}
+                        </>
+                      ) : null}
                     </svg>
                     <div className="absolute text-center">
                       <span className="font-display text-lg font-bold text-white block leading-none">
-                        ${adminStats.monthlyRevenue.toLocaleString()}
+                        ${revenueValue.toLocaleString()}
                       </span>
                       <span className="text-[9px] font-mono text-[#8C8C8C] uppercase">Live Gross</span>
                     </div>
