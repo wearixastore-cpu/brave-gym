@@ -17,6 +17,7 @@ import {
   createBooking as sbCreateBooking,
   removeBooking as sbRemoveBooking,
   fetchWorkoutLogs,
+  fetchAllWorkoutLogs,
   insertWorkoutLog as sbInsertWorkoutLog,
   fetchConsultations,
   submitConsultation as sbSubmitConsultation,
@@ -67,8 +68,12 @@ export function GymProvider({ children }) {
   // Admin view of all member bookings across the facility
   const [adminBookings, setAdminBookings] = useState([]);
 
-  // Workout log items
+  // Workout log items (current user)
   const [workoutLogs, setWorkoutLogs] = useState([]);
+
+  // All registered athletes/profiles and logs across facility for Admin Dossier inspection
+  const [allUsersRoster, setAllUsersRoster] = useState([]);
+  const [allWorkoutLogs, setAllWorkoutLogs] = useState([]);
 
   // Consultation Requests sent to Admin (loaded directly from Supabase)
   const [consultationRequests, setConsultationRequests] = useState([]);
@@ -152,13 +157,21 @@ export function GymProvider({ children }) {
       localStorage.removeItem("brave_consultations");
     }
 
-    // If admin, load system-wide financial telemetry and all member bookings
+    // If admin, load system-wide financial telemetry, member bookings, profiles & workout logs
     if (role === "admin" || currentUser?.role === "admin") {
-      const [allTx, allBk, allProf] = await Promise.all([
+      const [allTx, allBk, allProf, allLogs] = await Promise.all([
         fetchTransactions(),
         fetchAllBookings(),
-        fetchAllProfiles()
+        fetchAllProfiles(),
+        fetchAllWorkoutLogs()
       ]);
+
+      if (allProf && Array.isArray(allProf)) {
+        setAllUsersRoster(allProf);
+      }
+      if (allLogs && Array.isArray(allLogs)) {
+        setAllWorkoutLogs(allLogs);
+      }
 
       if (allBk && allBk.length > 0) {
         setAdminBookings(
@@ -763,6 +776,8 @@ export function GymProvider({ children }) {
         purchasePlan,
         workoutLogs,
         addWorkoutLog,
+        allUsersRoster,
+        allWorkoutLogs,
         consultationRequests,
         addConsultationRequest,
         updateConsultationStatus,

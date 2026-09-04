@@ -266,6 +266,20 @@ export async function fetchWorkoutLogs(userId) {
   return data;
 }
 
+export async function fetchAllWorkoutLogs() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("workout_logs")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.warn("Error loading all workout logs from Supabase:", error.message);
+    return null;
+  }
+  return data;
+}
+
 export async function insertWorkoutLog(userId, logItem) {
   if (!supabase) return null;
   const { data, error } = await supabase

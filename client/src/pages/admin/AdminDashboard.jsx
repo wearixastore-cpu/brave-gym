@@ -24,7 +24,10 @@ import {
   ChevronRight,
   Menu,
   PieChart,
-  User,
+  Eye,
+  Search,
+  BookOpen,
+  ClipboardList,
   Flame,
   Dumbbell,
   Award,
@@ -51,10 +54,15 @@ export default function AdminDashboard() {
     addScheduleClass,
     removeScheduleClass,
     adminBookings,
+    allUsersRoster,
+    allWorkoutLogs,
     isSupabaseConfigured
   } = useGym();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedDossierAthlete, setSelectedDossierAthlete] = useState(null);
+  const [athleteSearchQuery, setAthleteSearchQuery] = useState("");
+  const [athleteFilterTier, setAthleteFilterTier] = useState("ALL");
   const [inspectRequest, setInspectRequest] = useState(null);
   const [newClassModal, setNewClassModal] = useState(false);
   const [showAdminProfileModal, setShowAdminProfileModal] = useState(false);
@@ -124,7 +132,7 @@ export default function AdminDashboard() {
       setShowAdminProfileModal(true);
       setSearchParams({}, { replace: true });
     } else if (tabParam) {
-      if (["overview", "requests", "schedule", "finances", "tiers"].includes(tabParam)) {
+      if (["overview", "athletes", "bookings", "requests", "schedule", "finances", "tiers"].includes(tabParam)) {
         setActiveTab(tabParam);
       }
       setSearchParams({}, { replace: true });
@@ -221,6 +229,7 @@ export default function AdminDashboard() {
 
   const sidebarNavItems = [
     { id: "overview", label: "Dashboard Overview", icon: LayoutDashboard, desc: "Live KPI Telemetry" },
+    { id: "athletes", label: "Athlete Monitoring", icon: UserCheck, badge: allUsersRoster?.length, desc: "Full Client Dossier Monitoring" },
     { id: "bookings", label: "Athlete Bookings", icon: Users, badge: adminBookings?.length, desc: "Reserved Spots Roster" },
     { id: "requests", label: "Consultation Orders", icon: MessageSquare, badge: consultationRequests?.length, desc: "Athlete Intake Leads" },
     { id: "schedule", label: "Timetable & Classes", icon: Calendar, desc: "Arena Scheduling" },
@@ -651,6 +660,193 @@ export default function AdminDashboard() {
           </div>
 
         </div>
+
+        {/* Tab Content: Athlete Roster & Client Dossier Monitoring */}
+        {(activeTab === "overview" || activeTab === "athletes") && (
+          <div className="space-y-6 pt-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/10">
+              <div className="space-y-1">
+                <span className="text-xs font-mono uppercase tracking-widest text-amber-400 block">
+                  Comprehensive Client Surveillance & Management
+                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="font-display text-2xl font-bold text-white uppercase">
+                    Athlete Dossiers & Client Monitoring
+                  </h2>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-400 text-black shadow-sm">
+                    {allUsersRoster?.length || 0} Registered Clients
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-[#8C8C8C] max-w-sm">
+                Real-time dossiers with each user's active tier, reserved combine sessions, intake chat transcripts, and logged training outputs.
+              </p>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#141414] p-3 border border-white/10 rounded-sm">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  type="text"
+                  placeholder="Search athlete by name, email, discipline, or ID..."
+                  value={athleteSearchQuery}
+                  onChange={(e) => setAthleteSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-[#1B1B1B] border border-white/10 rounded text-xs text-white placeholder-white/40 focus:outline-none focus:border-amber-400 font-sans"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-[#8C8C8C] uppercase hidden md:inline">Tier:</span>
+                <select
+                  value={athleteFilterTier}
+                  onChange={(e) => setAthleteFilterTier(e.target.value)}
+                  className="bg-[#1B1B1B] border border-white/10 text-white text-xs px-3 py-2 rounded focus:outline-none focus:border-amber-400 font-mono"
+                >
+                  <option value="ALL">All Tiers</option>
+                  <option value="Black Tier">Black Tier</option>
+                  <option value="Obsidian Elite">Obsidian Elite</option>
+                  <option value="Iron Standard">Iron Standard</option>
+                  <option value="Free Tier">Free / Standard</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Roster Cards / Table */}
+            <div className="bg-[#141414] border border-white/10 rounded-sm divide-y divide-white/10">
+              {(() => {
+                const filteredAthletes = (allUsersRoster || []).filter((ath) => {
+                  const q = athleteSearchQuery.toLowerCase();
+                  const matchesQuery =
+                    !q ||
+                    ath.name?.toLowerCase().includes(q) ||
+                    ath.email?.toLowerCase().includes(q) ||
+                    ath.discipline?.toLowerCase().includes(q) ||
+                    ath.weight_class?.toLowerCase().includes(q) ||
+                    ath.id?.toLowerCase().includes(q);
+
+                  const tier = ath.membership_tier || "Iron Standard";
+                  const matchesTier =
+                    athleteFilterTier === "ALL" ||
+                    tier.toLowerCase().includes(athleteFilterTier.toLowerCase());
+
+                  return matchesQuery && matchesTier;
+                });
+
+                if (filteredAthletes.length === 0) {
+                  return (
+                    <div className="p-8 text-center text-xs text-[#8C8C8C]">
+                      {allUsersRoster?.length === 0
+                        ? "No registered athletes recorded yet. As athletes register and book, their dossiers will populate here."
+                        : "No athletes match the current search or tier filter."}
+                    </div>
+                  );
+                }
+
+                return filteredAthletes.map((ath) => {
+                  // Compute athlete's active bookings
+                  const athleteBookings = (adminBookings || []).filter(
+                    (b) => b.userId === ath.id || (ath.email && b.userEmail?.toLowerCase() === ath.email?.toLowerCase())
+                  );
+
+                  // Compute athlete's workout logs
+                  const athleteLogs = (allWorkoutLogs || []).filter(
+                    (l) => l.user_id === ath.id
+                  );
+
+                  // Compute athlete's consultation requests & chats
+                  const athleteRequests = (consultationRequests || []).filter(
+                    (r) =>
+                      r.userId === ath.id ||
+                      (ath.email && r.athleteEmail?.toLowerCase() === ath.email?.toLowerCase())
+                  );
+
+                  const tierName = ath.membership_tier || "Iron Standard";
+                  const tierColor = tierName.toLowerCase().includes("obsidian")
+                    ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                    : tierName.toLowerCase().includes("black")
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                    : "bg-white/10 text-white/80 border-white/20";
+
+                  return (
+                    <div
+                      key={ath.id}
+                      className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors"
+                    >
+                      <div className="flex items-start sm:items-center gap-4">
+                        {/* Avatar */}
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 bg-white/5 flex items-center justify-center text-amber-400 font-display font-bold text-lg shrink-0">
+                          {ath.avatar_url ? (
+                            <img
+                              src={ath.avatar_url}
+                              alt={ath.name}
+                              className="w-full h-full object-cover grayscale contrast-125"
+                            />
+                          ) : (
+                            (ath.name || "A").substring(0, 2).toUpperCase()
+                          )}
+                        </div>
+
+                        {/* Details */}
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="font-display text-base font-bold text-white uppercase">
+                              {ath.name || "Unnamed Athlete"}
+                            </h4>
+                            <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border font-semibold ${tierColor}`}>
+                              {tierName}
+                            </span>
+                            {ath.role === "admin" && (
+                              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-red-500/40 bg-red-500/10 text-red-400 font-bold">
+                                Admin
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-[#8C8C8C]">
+                            {ath.email && <span>✉️ {ath.email}</span>}
+                            {ath.phone && <span>📞 {ath.phone}</span>}
+                            {ath.weight_class && <span>⚖️ {ath.weight_class}</span>}
+                            {ath.discipline && <span>🥋 {ath.discipline}</span>}
+                          </div>
+
+                          {/* Mini telemetry pills */}
+                          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-mono">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/80">
+                              <Calendar className="w-3 h-3 text-amber-400" />
+                              {athleteBookings.length} Booked Classes
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/80">
+                              <Dumbbell className="w-3 h-3 text-emerald-400" />
+                              {athleteLogs.length} Training Logs
+                            </span>
+                            {athleteRequests.length > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                                <MessageSquare className="w-3 h-3" />
+                                {athleteRequests.length} Intake Inquiries
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Button: Inspect Complete Dossier */}
+                      <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDossierAthlete(ath)}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-black font-mono font-bold text-xs uppercase tracking-wider rounded transition-colors shadow-md"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Inspect Dossier</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* Tab Content: Athlete Bookings (Real-Time Class Reservations) */}
         {(activeTab === "overview" || activeTab === "bookings") && (
@@ -1626,6 +1822,329 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Complete Athlete Dossier Monitoring Modal */}
+        {selectedDossierAthlete && (
+          <div
+            onClick={() => setSelectedDossierAthlete(null)}
+            onWheel={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#121212] border border-white/20 p-5 sm:p-8 max-w-4xl w-full rounded-sm space-y-6 shadow-2xl relative max-h-[92vh] overflow-y-auto overscroll-contain"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedDossierAthlete(null)}
+                className="absolute top-5 right-5 p-1.5 text-white/60 hover:text-white bg-white/5 rounded-full transition-colors"
+                title="Close Dossier"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Header: Athlete Identity & Membership Tier */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400 bg-white/5 flex items-center justify-center text-amber-400 font-display text-2xl font-bold shrink-0">
+                    {selectedDossierAthlete.avatar_url ? (
+                      <img
+                        src={selectedDossierAthlete.avatar_url}
+                        alt={selectedDossierAthlete.name}
+                        className="w-full h-full object-cover grayscale contrast-125"
+                      />
+                    ) : (
+                      (selectedDossierAthlete.name || "A").substring(0, 2).toUpperCase()
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400">
+                        Athlete Surveillance Dossier
+                      </span>
+                      {selectedDossierAthlete.role === "admin" && (
+                        <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
+                          Admin Role
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-display text-2xl font-bold text-white uppercase">
+                      {selectedDossierAthlete.name || "Unnamed Athlete"}
+                    </h3>
+                    <p className="text-xs font-mono text-white/60">
+                      ID: {selectedDossierAthlete.id}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Active Tier Badge */}
+                <div className="flex flex-col sm:items-end">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-[#8C8C8C]">
+                    Active Package / Tier
+                  </span>
+                  <div className="font-display text-lg font-bold text-amber-400 uppercase">
+                    {selectedDossierAthlete.membership_tier || "Iron Standard"}
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    Status: Active Member
+                  </span>
+                </div>
+              </div>
+
+              {/* Dossier Grid Section 1: Biological & Athletic Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-[#1A1A1A] border border-white/10 rounded-sm space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#8C8C8C]">Discipline Focus</span>
+                  <div className="font-display text-sm font-bold text-white uppercase truncate">
+                    {selectedDossierAthlete.discipline || "All-Round MMA"}
+                  </div>
+                </div>
+                <div className="p-3 bg-[#1A1A1A] border border-white/10 rounded-sm space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#8C8C8C]">Weight Class</span>
+                  <div className="font-display text-sm font-bold text-white uppercase truncate">
+                    {selectedDossierAthlete.weight_class || "Cruiserweight"}
+                  </div>
+                </div>
+                <div className="p-3 bg-[#1A1A1A] border border-white/10 rounded-sm space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#8C8C8C]">Direct Contact</span>
+                  <div className="font-mono text-xs text-white truncate">
+                    {selectedDossierAthlete.phone || "No phone listed"}
+                  </div>
+                </div>
+                <div className="p-3 bg-[#1A1A1A] border border-white/10 rounded-sm space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#8C8C8C]">Registered Email</span>
+                  <div className="font-mono text-xs text-white truncate">
+                    {selectedDossierAthlete.email || "No email listed"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Athlete Bio */}
+              {selectedDossierAthlete.bio && (
+                <div className="p-3.5 bg-[#171717] border border-white/10 rounded-sm space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-amber-400">Athlete Statement / Bio</span>
+                  <p className="text-xs text-white/80 leading-relaxed font-sans">
+                    "{selectedDossierAthlete.bio}"
+                  </p>
+                </div>
+              )}
+
+              {/* Dossier Section 2: Active & Reserved Classes */}
+              {(() => {
+                const athleteBookings = (adminBookings || []).filter(
+                  (b) =>
+                    b.userId === selectedDossierAthlete.id ||
+                    (selectedDossierAthlete.email &&
+                      b.userEmail?.toLowerCase() === selectedDossierAthlete.email?.toLowerCase())
+                );
+
+                return (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-amber-400" />
+                        <h4 className="font-display text-base font-bold text-white uppercase">
+                          Reserved Sessions & Classes
+                        </h4>
+                      </div>
+                      <span className="text-xs font-mono text-white/60 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                        {athleteBookings.length} Active / Completed
+                      </span>
+                    </div>
+
+                    {athleteBookings.length > 0 ? (
+                      <div className="bg-[#181818] border border-white/10 rounded-sm divide-y divide-white/10 max-h-48 overflow-y-auto">
+                        {athleteBookings.map((b) => (
+                          <div key={b.id} className="p-3 flex items-center justify-between text-xs">
+                            <div>
+                              <div className="font-bold text-white uppercase font-display text-sm">
+                                {b.classTitle}
+                              </div>
+                              <div className="text-[11px] text-[#8C8C8C] flex gap-3 pt-0.5">
+                                <span>Coach: {b.trainer}</span>
+                                <span>•</span>
+                                <span>Arena: {b.room}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 font-mono text-right">
+                              <span className="text-white/70">{b.date}</span>
+                              <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                {b.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-[#181818] rounded-sm text-center text-xs text-[#8C8C8C]">
+                        No class reservations currently recorded for this athlete.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Dossier Section 3: Training & Daily Workout Logs */}
+              {(() => {
+                const athleteLogs = (allWorkoutLogs || []).filter(
+                  (l) => l.user_id === selectedDossierAthlete.id
+                );
+
+                return (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Dumbbell className="w-4 h-4 text-emerald-400" />
+                        <h4 className="font-display text-base font-bold text-white uppercase">
+                          Daily Training & Workout Logs
+                        </h4>
+                      </div>
+                      <span className="text-xs font-mono text-white/60 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                        {athleteLogs.length} Output Sessions Logged
+                      </span>
+                    </div>
+
+                    {athleteLogs.length > 0 ? (
+                      <div className="bg-[#181818] border border-white/10 rounded-sm divide-y divide-white/10 max-h-48 overflow-y-auto">
+                        {athleteLogs.map((l) => (
+                          <div key={l.id} className="p-3 flex items-center justify-between text-xs">
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-white uppercase font-display text-sm">
+                                {l.exercise}
+                              </div>
+                              <div className="text-[11px] text-[#8C8C8C] flex gap-3">
+                                {l.notes && <span>Notes: "{l.notes}"</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 font-mono text-right">
+                              <span className="text-white/60 text-[11px]">{l.date}</span>
+                              <span className="text-xs font-bold text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30">
+                                {l.weight}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-[#181818] rounded-sm text-center text-xs text-[#8C8C8C]">
+                        No workout logs entered yet by this athlete.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Dossier Section 4: Consultation Requests & Intake Chat Transcripts */}
+              {(() => {
+                const athleteRequests = (consultationRequests || []).filter(
+                  (r) =>
+                    r.userId === selectedDossierAthlete.id ||
+                    (selectedDossierAthlete.email &&
+                      r.athleteEmail?.toLowerCase() === selectedDossierAthlete.email?.toLowerCase())
+                );
+
+                return (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-blue-400" />
+                        <h4 className="font-display text-base font-bold text-white uppercase">
+                          Consultation Orders & AI Chat Transcripts
+                        </h4>
+                      </div>
+                      <span className="text-xs font-mono text-white/60 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                        {athleteRequests.length} Transcripts
+                      </span>
+                    </div>
+
+                    {athleteRequests.length > 0 ? (
+                      <div className="space-y-3">
+                        {athleteRequests.map((req) => (
+                          <div
+                            key={req.id}
+                            className="p-4 bg-[#181818] border border-white/10 rounded-sm space-y-3"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2 text-xs">
+                              <div>
+                                <span className="font-bold text-amber-400 uppercase font-mono">
+                                  Service: {req.serviceType || "General Assessment"}
+                                </span>
+                                <div className="text-[11px] text-[#8C8C8C] pt-0.5">
+                                  Date: {req.submittedAt} · Preferred: {req.preferredDate} ({req.preferredTime})
+                                </div>
+                              </div>
+                              <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold border ${
+                                req.status === "confirmed"
+                                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                                  : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                              }`}>
+                                {req.status}
+                              </span>
+                            </div>
+
+                            {req.details && (
+                              <div className="text-xs text-white/80">
+                                <span className="text-[10px] uppercase font-mono text-[#8C8C8C] block">Client Message:</span>
+                                "{req.details}"
+                              </div>
+                            )}
+
+                            {/* Chat Transcript */}
+                            {req.chatHistory && req.chatHistory.length > 0 && (
+                              <div className="space-y-1.5 pt-1">
+                                <span className="text-[10px] uppercase font-mono text-blue-400 block font-bold">
+                                  Conversation Transcript ({req.chatHistory.length} messages)
+                                </span>
+                                <div className="bg-[#121212] p-3 rounded border border-white/5 space-y-2 max-h-36 overflow-y-auto text-xs">
+                                  {req.chatHistory.map((msg, mIdx) => (
+                                    <div
+                                      key={mIdx}
+                                      className={`flex flex-col ${
+                                        msg.sender === "user" ? "items-end" : "items-start"
+                                      }`}
+                                    >
+                                      <span className="text-[9px] font-mono text-[#8C8C8C] uppercase">
+                                        {msg.sender === "user" ? "Athlete" : "Brave AI Coordinator"}
+                                      </span>
+                                      <div
+                                        className={`px-3 py-1.5 rounded max-w-[85%] text-xs ${
+                                          msg.sender === "user"
+                                            ? "bg-amber-400/10 text-amber-300 border border-amber-400/20"
+                                            : "bg-white/10 text-white border border-white/15"
+                                        }`}
+                                      >
+                                        {msg.text}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-[#181818] rounded-sm text-center text-xs text-[#8C8C8C]">
+                        No intake chat orders on file for this athlete.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Dossier Modal Footer */}
+              <div className="flex justify-end pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDossierAthlete(null)}
+                  className="px-5 py-2 bg-white text-black font-bold uppercase text-xs rounded hover:bg-[#F5F5F3] transition-colors"
+                >
+                  Close Dossier
+                </button>
+              </div>
             </div>
           </div>
         )}
