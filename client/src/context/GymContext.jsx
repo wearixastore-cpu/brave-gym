@@ -48,7 +48,17 @@ export function GymProvider({ children }) {
 
   const [programs] = useState(INITIAL_PROGRAMS);
   const [trainers] = useState(INITIAL_TRAINERS);
-  const [memberships] = useState(INITIAL_MEMBERSHIPS);
+  const [memberships, setMemberships] = useState(() => {
+    const saved = localStorage.getItem("brave_memberships");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [schedule, setSchedule] = useState([]);
 
   // User's booked classes
@@ -615,6 +625,26 @@ export function GymProvider({ children }) {
   };
 
   // ==========================================
+  // MEMBERSHIP TIERS MANAGEMENT
+  // ==========================================
+
+  const addMembershipTier = (tier) => {
+    setMemberships((prev) => {
+      const updated = [tier, ...prev];
+      localStorage.setItem("brave_memberships", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeMembershipTier = (tierId) => {
+    setMemberships((prev) => {
+      const updated = prev.filter((t) => t.id !== tierId);
+      localStorage.setItem("brave_memberships", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // ==========================================
   // NOTIFICATIONS
   // ==========================================
 
@@ -720,6 +750,8 @@ export function GymProvider({ children }) {
         programs,
         trainers,
         memberships,
+        addMembershipTier,
+        removeMembershipTier,
         schedule,
         setSchedule,
         addScheduleClass,

@@ -28,11 +28,12 @@ export default function MembershipSection() {
         </Reveal>
 
         {/* Pricing Cards Grid with Staggered Reveals */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-          {memberships.map((plan, idx) => {
-            const isPopular = plan.popular;
-            return (
-              <Reveal key={plan.id} delay={0.1 + idx * 0.12} className="flex">
+        {memberships && memberships.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+            {memberships.map((plan, idx) => {
+              const isPopular = plan.popular;
+              return (
+                <Reveal key={plan.id} delay={0.1 + idx * 0.12} className="flex">
                 <div
                   className={`relative rounded-sm p-8 flex flex-col justify-between w-full transition-all duration-300 border ${
                     isPopular
@@ -108,6 +109,13 @@ export default function MembershipSection() {
             );
           })}
         </div>
+        ) : (
+          <div className="p-12 text-center text-xs text-[#8C8C8C] bg-[#121212] border border-white/10 rounded-sm max-w-xl mx-auto space-y-2">
+            <ShieldCheck className="w-6 h-6 text-white/40 mx-auto" />
+            <p className="font-semibold text-white">Membership Cohort Updating</p>
+            <p>New season membership tiers are being configured by the Brave Gym Director.</p>
+          </div>
+        )}
 
         {/* Guarantee Banner */}
         <Reveal delay={0.35}>

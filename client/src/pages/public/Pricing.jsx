@@ -72,80 +72,88 @@ export default function Pricing() {
         )}
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {memberships.map((plan) => {
-            const isPopular = plan.popular;
-            return (
-              <div
-                key={plan.id}
-                className={`rounded-sm p-8 flex flex-col justify-between border relative transition-all ${
-                  isPopular
-                    ? "bg-[#161616] border-white shadow-[0_0_50px_rgba(255,255,255,0.15)] -translate-y-2"
-                    : "bg-[#121212] border-white/10 hover:border-white/30"
-                }`}
-              >
-                {isPopular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-white text-black font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
-                    <Flame className="w-3 h-3 fill-black" />
-                    Most Popular Choice
+        {memberships && memberships.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {memberships.map((plan) => {
+              const isPopular = plan.popular;
+              return (
+                <div
+                  key={plan.id}
+                  className={`rounded-sm p-8 flex flex-col justify-between border relative transition-all ${
+                    isPopular
+                      ? "bg-[#161616] border-white shadow-[0_0_50px_rgba(255,255,255,0.15)] -translate-y-2"
+                      : "bg-[#121212] border-white/10 hover:border-white/30"
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-white text-black font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
+                      <Flame className="w-3 h-3 fill-black" />
+                      Most Popular Choice
+                    </div>
+                  )}
+
+                  <div className="space-y-6">
+                    <div>
+                      <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">
+                        Membership Tier
+                      </span>
+                      <h2 className="font-display text-3xl font-bold text-white uppercase mt-1">
+                        {plan.name}
+                      </h2>
+                    </div>
+
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-display text-6xl font-extrabold text-white">
+                        ${plan.price}
+                      </span>
+                      <span className="text-xs uppercase tracking-widest text-[#8C8C8C]">
+                        / {plan.interval || plan.billing || "monthly"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[#8C8C8C] leading-relaxed">
+                      {plan.description}
+                    </p>
+
+                    <div className="pt-6 border-t border-white/10 space-y-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-white block">
+                        Program Inclusions:
+                      </span>
+                      <ul className="space-y-2.5">
+                        {plan.features?.map((feat, idx) => (
+                          <li key={idx} className="flex items-start gap-2.5 text-xs text-white/80">
+                            <Check className="w-4 h-4 shrink-0 text-white mt-0.5" />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                )}
 
-                <div className="space-y-6">
-                  <div>
-                    <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">
-                      Membership Tier
-                    </span>
-                    <h2 className="font-display text-3xl font-bold text-white uppercase mt-1">
-                      {plan.name}
-                    </h2>
-                  </div>
-
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-6xl font-extrabold text-white">
-                      ${plan.price}
-                    </span>
-                    <span className="text-xs uppercase tracking-widest text-[#8C8C8C]">
-                      / {plan.interval}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-[#8C8C8C] leading-relaxed">
-                    {plan.description}
-                  </p>
-
-                  <div className="pt-6 border-t border-white/10 space-y-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-white block">
-                      Program Inclusions:
-                    </span>
-                    <ul className="space-y-2.5">
-                      {plan.features.map((feat, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5 text-xs text-white/80">
-                          <Check className="w-4 h-4 shrink-0 text-white mt-0.5" />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="pt-8 mt-8 border-t border-white/10">
+                    <button
+                      onClick={() => handleCheckout(plan)}
+                      className={`w-full py-4 rounded-sm text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        isPopular
+                          ? "bg-white text-black hover:bg-[#F5F5F3]"
+                          : "border border-white/30 text-white hover:bg-white hover:text-black"
+                      }`}
+                    >
+                      Select {plan.name}
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-
-                <div className="pt-8 mt-8 border-t border-white/10">
-                  <button
-                    onClick={() => handleCheckout(plan)}
-                    className={`w-full py-4 rounded-sm text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
-                      isPopular
-                        ? "bg-white text-black hover:bg-[#F5F5F3]"
-                        : "border border-white/30 text-white hover:bg-white hover:text-black"
-                    }`}
-                  >
-                    Select {plan.name}
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-12 text-center text-xs text-[#8C8C8C] bg-[#121212] border border-white/10 rounded-sm max-w-xl mx-auto space-y-3">
+            <ShieldCheck className="w-8 h-8 text-white/40 mx-auto" />
+            <h3 className="font-display text-lg font-bold text-white uppercase">Subscription Plans Updating</h3>
+            <p>Admin is currently configuring active membership options. Please contact reception or request an intake consultation.</p>
+          </div>
+        )}
 
         {/* FAQ Accordion */}
         <div className="max-w-4xl mx-auto space-y-8 pt-12">

@@ -41,6 +41,8 @@ export default function AdminDashboard() {
     schedule, 
     setSchedule, 
     memberships,
+    addMembershipTier,
+    removeMembershipTier,
     consultationRequests,
     updateConsultationStatus,
     removeConsultationRequest,
@@ -57,7 +59,6 @@ export default function AdminDashboard() {
   const [newClassModal, setNewClassModal] = useState(false);
   const [showAdminProfileModal, setShowAdminProfileModal] = useState(false);
   const [newTierModal, setNewTierModal] = useState(false);
-  const [tierList, setTierList] = useState(memberships || []);
 
   const [isEditingAdminProfile, setIsEditingAdminProfile] = useState(false);
   const [adminProfileForm, setAdminProfileForm] = useState({
@@ -191,12 +192,17 @@ export default function AdminDashboard() {
     const newTier = {
       id: "tier-" + Date.now(),
       name: newTierData.name,
-      price: newTierData.price,
-      billing: newTierData.billing,
+      price: Number(newTierData.price) || newTierData.price,
+      interval: newTierData.billing || "monthly",
+      billing: newTierData.billing || "monthly",
       description: newTierData.description,
-      features: newTierData.features.split("\n").filter((f) => f.trim() !== "")
+      features: newTierData.features.split("\n").filter((f) => f.trim() !== ""),
+      popular: false,
+      cta: `Claim ${newTierData.name}`
     };
-    setTierList((prev) => [newTier, ...prev]);
+    if (addMembershipTier) {
+      addMembershipTier(newTier);
+    }
     setNewTierModal(false);
     setNewTierData({
       name: "",
@@ -1060,8 +1066,8 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {tierList && tierList.length > 0 ? (
-                tierList.map((tier) => (
+              {memberships && memberships.length > 0 ? (
+                memberships.map((tier) => (
                   <div key={tier.id} className="p-6 bg-[#141414] border border-white/10 rounded-sm space-y-4 shadow-lg hover:border-white/30 transition-all flex flex-col justify-between">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -1074,8 +1080,8 @@ export default function AdminDashboard() {
                       <h3 className="font-display text-xl font-bold text-white uppercase">{tier.name}</h3>
                       
                       <div className="flex items-baseline gap-1">
-                        <span className="font-display text-3xl font-extrabold text-white">{tier.price}</span>
-                        <span className="text-xs text-[#8C8C8C]">/{tier.billing || "monthly"}</span>
+                        <span className="font-display text-3xl font-extrabold text-white">${tier.price}</span>
+                        <span className="text-xs text-[#8C8C8C]">/{tier.billing || tier.interval || "monthly"}</span>
                       </div>
 
                       <p className="text-xs text-[#8C8C8C] leading-relaxed">{tier.description}</p>
@@ -1094,8 +1100,8 @@ export default function AdminDashboard() {
                     <div className="pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-[#8C8C8C]">
                       <span className="font-mono">Ref #{tier.id}</span>
                       <button
-                        onClick={() => setTierList((prev) => prev.filter((t) => t.id !== tier.id))}
-                        className="text-rose-400 hover:text-rose-300 hover:underline text-xs"
+                        onClick={() => removeMembershipTier && removeMembershipTier(tier.id)}
+                        className="text-rose-400 hover:text-rose-300 hover:underline text-xs cursor-pointer"
                       >
                         Delete Tier
                       </button>
