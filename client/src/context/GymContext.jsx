@@ -28,7 +28,10 @@ import {
   sendNotification as sbSendNotification,
   fetchTransactions,
   recordTransaction,
-  fetchAllProfiles
+  fetchAllProfiles,
+  fetchMembershipTiers,
+  createMembershipTier as sbCreateMembershipTier,
+  deleteMembershipTier as sbDeleteMembershipTier
 } from "../lib/supabase";
 
 const GymContext = createContext(null);
@@ -53,12 +56,13 @@ export function GymProvider({ children }) {
     const saved = localStorage.getItem("brave_memberships");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch {
-        return [];
+        // fallback
       }
     }
-    return [];
+    return INITIAL_MEMBERSHIPS;
   });
   const [schedule, setSchedule] = useState([]);
 
@@ -132,6 +136,24 @@ export function GymProvider({ children }) {
       );
     } else {
       setSchedule([]);
+    }
+
+    // Load membership tiers from Supabase (created/managed by Admin)
+    const remoteTiers = await fetchMembershipTiers();
+    if (Array.isArray(remoteTiers) && remoteTiers.length > 0) {
+      const mappedTiers = remoteTiers.map((t) => ({
+        id: t.id,
+        name: t.name,
+        price: Number(t.price),
+        interval: t.interval || t.billing || "monthly",
+        billing: t.billing || t.interval || "monthly",
+        description: t.description || "",
+        features: Array.isArray(t.features) ? t.features : [],
+        popular: !!t.popular,
+        cta: t.cta || `Claim ${t.name}`
+      }));
+      setMemberships(mappedTiers);
+      localStorage.setItem("brave_memberships", JSON.stringify(mappedTiers));
     }
 
     // Load consultations directly from Supabase
@@ -425,14 +447,16 @@ export function GymProvider({ children }) {
     return userObj;
   };
 
-  const register = async (name, email, password, role = "user") => {
+  const register = async (name, email, password, role = "user", initialMembership = "Brave Trial") => {
     const cleanEmail = email.trim().toLowerCase();
     const isAdmin = cleanEmail.includes("admin") || role === "admin";
+    const userTier = isAdmin ? "Staff Command" : (initialMembership || "Brave Trial");
 
     if (isSupabaseConfigured) {
       const { data, error } = await supabaseSignUp(cleanEmail, password, {
         name,
-        role: isAdmin ? "admin" : role
+        role: isAdmin ? "admin" : role,
+        membership: userTier
       });
       if (error) {
         throw error;
@@ -445,7 +469,7 @@ export function GymProvider({ children }) {
           name: name || "New Athlete",
           email: cleanEmail,
           role: isAdmin ? "admin" : role,
-          membership: "Brave Trial",
+          membership: userTier,
           status: "Active",
           renewalDate: "30 Days Free",
           streak: 0,
@@ -465,7 +489,7 @@ export function GymProvider({ children }) {
       name: name || "New Athlete",
       email: cleanEmail,
       role: isAdmin ? "admin" : "user",
-      membership: "Brave Trial",
+      membership: userTier,
       status: "Active",
       renewalDate: "30 Days Free",
       streak: 0,
@@ -641,20 +665,28 @@ export function GymProvider({ children }) {
   // MEMBERSHIP TIERS MANAGEMENT
   // ==========================================
 
-  const addMembershipTier = (tier) => {
+  const addMembershipTier = async (tier) => {
     setMemberships((prev) => {
       const updated = [tier, ...prev];
       localStorage.setItem("brave_memberships", JSON.stringify(updated));
       return updated;
     });
+
+    if (isSupabaseConfigured) {
+      await sbCreateMembershipTier(tier);
+    }
   };
 
-  const removeMembershipTier = (tierId) => {
+  const removeMembershipTier = async (tierId) => {
     setMemberships((prev) => {
       const updated = prev.filter((t) => t.id !== tierId);
       localStorage.setItem("brave_memberships", JSON.stringify(updated));
       return updated;
     });
+
+    if (isSupabaseConfigured) {
+      await sbDeleteMembershipTier(tierId);
+    }
   };
 
   // ==========================================

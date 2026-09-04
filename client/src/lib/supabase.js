@@ -482,3 +482,62 @@ export async function fetchAllProfiles() {
   return data;
 }
 
+// ==========================================
+// MEMBERSHIP TIERS HELPERS (ADMIN & USER SYNC)
+// ==========================================
+
+export async function fetchMembershipTiers() {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("membership_tiers")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.warn("Error loading membership tiers from Supabase:", error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function createMembershipTier(tier) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("membership_tiers")
+    .insert([
+      {
+        id: tier.id || `tier-${Date.now()}`,
+        name: tier.name,
+        price: Number(tier.price) || 0,
+        interval: tier.interval || tier.billing || "monthly",
+        billing: tier.billing || tier.interval || "monthly",
+        description: tier.description || "",
+        features: tier.features || [],
+        popular: !!tier.popular,
+        cta: tier.cta || `Claim ${tier.name}`
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating membership tier in Supabase:", error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function deleteMembershipTier(tierId) {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from("membership_tiers")
+    .delete()
+    .eq("id", tierId);
+
+  if (error) {
+    console.error("Error deleting membership tier in Supabase:", error.message);
+    return false;
+  }
+  return true;
+}
+

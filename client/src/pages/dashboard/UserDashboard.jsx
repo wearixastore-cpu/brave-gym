@@ -43,6 +43,8 @@ export default function UserDashboard() {
     consultationRequests,
     updateProfile,
     uploadUserAvatar,
+    memberships,
+    purchasePlan,
     isSupabaseConfigured
   } = useGym();
   
@@ -222,6 +224,7 @@ export default function UserDashboard() {
           <div className="flex items-center gap-1.5 bg-[#141414] p-1 rounded-sm border border-white/10 overflow-x-auto max-w-full scrollbar-none">
             {[
               { id: "overview", label: "Hub Overview" },
+              { id: "tiers", label: "Membership Tiers", badge: memberships?.length },
               { id: "schedule", label: "My Bookings", badge: bookings?.length },
               { id: "notifications", label: "Admin Dispatch", badge: unreadCount },
               { id: "logs", label: "Training Logs", badge: workoutLogs?.length }
@@ -297,40 +300,50 @@ export default function UserDashboard() {
               </div>
 
               {/* Membership Tier Status */}
-              <div className="bg-[#141414] border border-white/10 rounded-sm p-6 space-y-4 shadow-lg">
-                <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">
-                  <span className="flex items-center gap-2 text-white">
-                    <ShieldCheck className="w-3.5 h-3.5 text-white" /> Active Plan
-                  </span>
-                  <span className="text-emerald-400 font-semibold uppercase">{currentUser?.status}</span>
+              <div className="bg-[#141414] border border-white/10 rounded-sm p-6 space-y-4 shadow-lg flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">
+                    <span className="flex items-center gap-2 text-white">
+                      <ShieldCheck className="w-3.5 h-3.5 text-white" /> Active Plan
+                    </span>
+                    <span className="text-emerald-400 font-semibold uppercase">{currentUser?.status}</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="font-display text-2xl font-bold text-white uppercase">{currentUser?.membership}</h3>
+                    <p className="text-xs text-[#8C8C8C]">Renews on {currentUser?.renewalDate}.</p>
+                  </div>
+
+                  {/* Dynamic inclusions from current tier */}
+                  <div className="space-y-1.5 text-xs text-white/80 pt-2 border-t border-white/10">
+                    {(() => {
+                      const matchedTier = (memberships || []).find(
+                        (t) => t.name?.toLowerCase() === currentUser?.membership?.toLowerCase()
+                      );
+                      const features = matchedTier?.features?.length > 0 
+                        ? matchedTier.features 
+                        : [
+                            "Unlimited Strike & Barbell Access",
+                            "7-Day Advance Floor Reservation",
+                            "Sauna & Cold Plunge Suite Included"
+                          ];
+                      return features.slice(0, 3).map((f, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>{f}</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <h3 className="font-display text-2xl font-bold text-white uppercase">{currentUser?.membership}</h3>
-                  <p className="text-xs text-[#8C8C8C]">Renews on {currentUser?.renewalDate}.</p>
-                </div>
-
-                <div className="space-y-1.5 text-xs text-white/80 pt-2 border-t border-white/10">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Unlimited Strike & Barbell Access</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>7-Day Advance Floor Reservation</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>Sauna & Cold Plunge Suite Included</span>
-                  </div>
-                </div>
-
-                <Link
-                  to="/pricing"
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("tiers")}
                   className="block w-full py-2.5 text-center text-xs uppercase tracking-widest font-semibold border border-white/20 text-white hover:bg-white hover:text-black rounded transition-colors"
                 >
-                  Manage Membership
-                </Link>
+                  Manage Membership & Tiers
+                </button>
               </div>
 
               {/* Live Dispatch / Admin Response Pill */}
@@ -564,6 +577,125 @@ export default function UserDashboard() {
                   <Link to="/programs" className="inline-block px-5 py-2 bg-white text-black font-bold uppercase rounded text-xs">
                     Browse Weekly Timetable
                   </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 2. Membership Tiers & Access Plans Tab (Created / Managed by Admin) */}
+        {activeTab === "tiers" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10">
+              <div className="space-y-1">
+                <span className="text-xs font-mono uppercase tracking-widest text-[#8C8C8C]">
+                  Official Facility Tiers
+                </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="font-display text-2xl font-bold text-white uppercase">
+                    Available Membership Tiers
+                  </h2>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-400 text-black shadow-sm">
+                    {memberships?.length || 0} Plans Configured
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-[#8C8C8C] max-w-sm">
+                Plans created and deployed by Brave HQ Admin. Select a tier to upgrade or change your athletic privileges.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {memberships && memberships.length > 0 ? (
+                memberships.map((plan) => {
+                  const isCurrent =
+                    currentUser?.membership?.toLowerCase() === plan.name?.toLowerCase();
+
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`p-6 sm:p-8 bg-[#141414] rounded-sm space-y-6 flex flex-col justify-between border transition-all ${
+                        isCurrent
+                          ? "border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.2)] -translate-y-1"
+                          : "border-white/10 hover:border-white/30"
+                      }`}
+                    >
+                      <div className="space-y-5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-mono tracking-widest text-[#8C8C8C]">
+                            Facility Plan
+                          </span>
+                          {isCurrent ? (
+                            <span className="text-[10px] uppercase font-mono tracking-widest bg-amber-400 text-black font-bold px-2 py-0.5 rounded">
+                              Current Plan
+                            </span>
+                          ) : plan.popular ? (
+                            <span className="text-[10px] uppercase font-mono tracking-widest bg-white/10 text-white font-semibold px-2 py-0.5 rounded border border-white/20">
+                              Popular Choice
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div>
+                          <h3 className="font-display text-2xl font-bold text-white uppercase">
+                            {plan.name}
+                          </h3>
+                          <div className="flex items-baseline gap-2 mt-2">
+                            <span className="font-display text-4xl sm:text-5xl font-extrabold text-white">
+                              ${plan.price}
+                            </span>
+                            <span className="text-xs text-[#8C8C8C] uppercase tracking-wider font-mono">
+                              / {plan.billing || plan.interval || "monthly"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-[#8C8C8C] leading-relaxed">
+                          {plan.description}
+                        </p>
+
+                        <div className="pt-4 border-t border-white/10 space-y-2">
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-white block">
+                            Tier Inclusions:
+                          </span>
+                          <ul className="space-y-2">
+                            {plan.features?.map((feat, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-xs text-white/80">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                                <span>{feat}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="pt-6 border-t border-white/10">
+                        {isCurrent ? (
+                          <button
+                            disabled
+                            className="w-full py-3 bg-white/10 text-white/60 font-bold uppercase text-xs tracking-wider rounded cursor-not-allowed text-center"
+                          >
+                            Currently Enrolled
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await purchasePlan(plan);
+                              confetti({ particleCount: 70, spread: 60, origin: { y: 0.7 } });
+                            }}
+                            className="w-full py-3 bg-white hover:bg-[#F5F5F3] text-black font-bold uppercase text-xs tracking-widest rounded transition-all shadow hover:scale-[1.01]"
+                          >
+                            {plan.cta || `Switch to ${plan.name}`}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-full p-10 text-center text-xs text-[#8C8C8C] bg-[#141414] border border-white/10 rounded-sm">
+                  No membership tiers currently defined by Brave HQ.
                 </div>
               )}
             </div>

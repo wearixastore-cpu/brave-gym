@@ -1,17 +1,21 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Lock, Mail, User, Shield, AlertCircle } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowRight, Lock, Mail, User, Shield, AlertCircle, Flame, Check } from "lucide-react";
 import { useGym } from "../../context/GymContext";
 import confetti from "canvas-confetti";
 
 export default function Register() {
+  const [searchParams] = useSearchParams();
+  const { register, memberships } = useGym();
+  const navigate = useNavigate();
+
+  const preselectedTier = searchParams.get("tier") || (memberships?.[0]?.name || "Brave Trial");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedTier, setSelectedTier] = useState(preselectedTier);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { register } = useGym();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +27,7 @@ export default function Register() {
     try {
       setLoading(true);
       setError("");
-      const user = await register(name, email, password, "user");
+      const user = await register(name, email, password, "user", selectedTier);
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
 
       if (user.role === "admin") {
@@ -143,6 +147,41 @@ export default function Register() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-[#1C1C1C] border border-white/15 rounded text-white text-sm focus:outline-none focus:border-white transition-colors"
                 />
+              </div>
+            </div>
+
+            {/* Membership Tier Selector (Populated from Admin-Created Tiers) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <label htmlFor="register-tier" className="uppercase font-mono text-[#8C8C8C] block text-[11px]">
+                  Select Starting Membership Tier
+                </label>
+                <Link to="/pricing" className="text-[10px] text-amber-400 hover:underline uppercase font-mono">
+                  Compare Tiers
+                </Link>
+              </div>
+              <div className="relative">
+                <Shield className="w-4 h-4 text-amber-400 absolute left-3 top-3 pointer-events-none" />
+                <select
+                  id="register-tier"
+                  value={selectedTier}
+                  onChange={(e) => setSelectedTier(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#1C1C1C] border border-white/15 rounded text-white text-sm focus:outline-none focus:border-amber-400 transition-colors font-sans"
+                >
+                  {memberships && memberships.length > 0 ? (
+                    memberships.map((tier) => (
+                      <option key={tier.id} value={tier.name} className="bg-[#1C1C1C] text-white">
+                        {tier.name} — ${tier.price} / {tier.billing || tier.interval || "monthly"}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Brave Trial" className="bg-[#1C1C1C] text-white">Brave Trial — $39 / pass</option>
+                      <option value="Black Tier" className="bg-[#1C1C1C] text-white">Black Tier — $189 / monthly</option>
+                      <option value="Obsidian Private" className="bg-[#1C1C1C] text-white">Obsidian Private — $349 / monthly</option>
+                    </>
+                  )}
+                </select>
               </div>
             </div>
 
